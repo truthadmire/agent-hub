@@ -1,0 +1,411 @@
+{
+  "date": "2026-11-26",
+  "system": "macOS 26.6.2 (25G83), Apple Silicon, Swift 6.4",
+  "applicationRevision": "development working tree before first commit",
+  "offline": {
+    "single": {
+      "observedUTC": "2026-11-26T15:16:41+00:00",
+      "taskID": "97FDFD9F-57F9-411E-BBB1-882A9E8981FD",
+      "state": "completed",
+      "sourceBaseline": "97a04b3551c6cea575044bd3932f089eb90ce4c2",
+      "integratedCommit": "731c2a2e837107bee1b654cad506f0f64054db1e",
+      "sourceUnchanged": true,
+      "changedFiles": [
+        "status.txt"
+      ],
+      "attempts": [
+        "codex/implementation:succeeded"
+      ],
+      "checkExitCodes": [
+        1,
+        0
+      ],
+      "recordedHandoffs": 1,
+      "eventCount": 22,
+      "diffSHA256": "4ab82147e712fd1b137ec7df6de870c12f4439a3be066748057d82d60ef36bbc"
+    },
+    "gallery": {
+      "observedUTC": "2026-11-26T15:19:57+00:00",
+      "taskID": "85289E1A-C79E-458D-B16F-B54C82F382BB",
+      "state": "completed",
+      "sourceBaseline": "9b94c2a1c37b83d7b72668155f9ccfdf8552d203",
+      "integratedCommit": "368a8f66eefa234124f64345b4956f9eeefccf19",
+      "sourceUnchanged": true,
+      "changedFiles": [
+        "catalog.py",
+        "page.py",
+        "tests/test_filter.py"
+      ],
+      "attempts": [
+        "codex/@plan:succeeded",
+        "codex/catalogue:succeeded",
+        "antigravity/filters:succeeded",
+        "dsh/contract-tests:succeeded"
+      ],
+      "checkExitCodes": [
+        0,
+        0
+      ],
+      "recordedHandoffs": 4,
+      "eventCount": 47,
+      "diffSHA256": "83b678be608df4ada61c6220f1640331dede81f31d19ca858fe1b0fa9bc38492",
+      "previewAPI": {
+        "items": [
+          {
+            "id": 4,
+            "title": "Last Ferry",
+            "category": "Coast"
+          }
+        ],
+        "total": 3,
+        "page": 2,
+        "pages": 2
+      },
+      "emptyPageObserved": true,
+      "finalTestOutput": "test_index_and_api (test_baseline.Baseline.test_index_and_api) ... ok\ntest_empty_and_invalid (test_filter.FilteredIndex.test_empty_and_invalid) ... ok\ntest_filter_then_paginate (test_filter.FilteredIndex.test_filter_then_paginate) ... ok\ntest_html (test_filter.FilteredIndex.test_html) ... ok\n\n----------------------------------------------------------------------\nRan 4 tests in 0.000s\n\nOK"
+    },
+    "repair": {
+      "observedUTC": "2026-11-26T15:16:45+00:00",
+      "taskID": "F7E5654A-9C5A-4EBB-B3DB-17AE26110E02",
+      "state": "completed",
+      "sourceBaseline": "ae423f363b918974c6a24929b6b781e8ed064f18",
+      "integratedCommit": "956af3a5d6bdd8c6807bd5ce5a6e0a4c00b0b334",
+      "sourceUnchanged": true,
+      "changedFiles": [
+        "status.txt"
+      ],
+      "attempts": [
+        "codex/implementation:succeeded",
+        "codex/repair-1:succeeded"
+      ],
+      "checkExitCodes": [
+        1,
+        1,
+        0
+      ],
+      "recordedHandoffs": 3,
+      "eventCount": 37,
+      "diffSHA256": "4ab82147e712fd1b137ec7df6de870c12f4439a3be066748057d82d60ef36bbc"
+    },
+    "stalled": {
+      "observedUTC": "2026-11-26T15:16:44+00:00",
+      "taskID": "CADF8034-7369-4819-B5CE-76B534E84E43",
+      "state": "needs_user",
+      "sourceBaseline": "acd99b83b2ec145823be9167b7dead23d5644691",
+      "integratedCommit": "3fe315cdd0feea3bd0ec7e99900de1d9c581c989",
+      "sourceUnchanged": true,
+      "changedFiles": [
+        "status.txt"
+      ],
+      "attempts": [
+        "codex/implementation:succeeded",
+        "codex/repair-1:succeeded"
+      ],
+      "checkExitCodes": [
+        1,
+        1,
+        1
+      ],
+      "recordedHandoffs": 3,
+      "eventCount": 37,
+      "diffSHA256": "940027bbc79b79143ca0843a31f58b5b8472175af5d905baff4e513c165ac751",
+      "attentionReason": "no_progress"
+    },
+    "auth": {
+      "observedUTC": "2026-11-26T15:16:32+00:00",
+      "taskID": "7422C16F-AB37-4297-901F-F378E9732849",
+      "state": "needs_user",
+      "sourceBaseline": "ae423f363b918974c6a24929b6b781e8ed064f18",
+      "integratedCommit": "ae423f363b918974c6a24929b6b781e8ed064f18",
+      "sourceUnchanged": true,
+      "changedFiles": [],
+      "attempts": [
+        "codex/implementation:failed"
+      ],
+      "checkExitCodes": [
+        1
+      ],
+      "recordedHandoffs": 0,
+      "eventCount": 14,
+      "diffSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "attentionReason": "authentication"
+    },
+    "protocol": {
+      "observedUTC": "2026-11-26T15:16:34+00:00",
+      "taskID": "FE50AA16-76A6-468B-986A-C6667483F421",
+      "state": "needs_user",
+      "sourceBaseline": "a8e3e97785857b9282e4e45be19cce99a66888cd",
+      "integratedCommit": "a8e3e97785857b9282e4e45be19cce99a66888cd",
+      "sourceUnchanged": true,
+      "changedFiles": [],
+      "attempts": [
+        "codex/implementation:failed"
+      ],
+      "checkExitCodes": [
+        1
+      ],
+      "recordedHandoffs": 0,
+      "eventCount": 13,
+      "diffSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "attentionReason": "protocolError"
+    },
+    "pause": {
+      "observedUTC": "2026-11-26T15:21:40+00:00",
+      "taskID": "0BC0649A-1B97-4C24-996F-2E6B72392520",
+      "state": "completed",
+      "sourceBaseline": "cf9d71fc88c0321c6af9b339c1036118fe79cffb",
+      "integratedCommit": "945ef7981dce4c5e9c0bb423654e85b1792d68e6",
+      "sourceUnchanged": true,
+      "changedFiles": [
+        "status.txt"
+      ],
+      "attempts": [
+        "codex/implementation:interrupted",
+        "codex/implementation:succeeded"
+      ],
+      "checkExitCodes": [
+        1,
+        0
+      ],
+      "recordedHandoffs": 3,
+      "eventCount": 31,
+      "diffSHA256": "4ab82147e712fd1b137ec7df6de870c12f4439a3be066748057d82d60ef36bbc"
+    },
+    "cancel": {
+      "observedUTC": "2026-11-26T15:19:39+00:00",
+      "taskID": "27498AA0-3566-485F-8EF0-EB6DF70FC4D2",
+      "state": "cancelled",
+      "sourceBaseline": "add7210a536d15a72c80760fba784a39a3cbc6e1",
+      "integratedCommit": "add7210a536d15a72c80760fba784a39a3cbc6e1",
+      "sourceUnchanged": true,
+      "changedFiles": [],
+      "attempts": [
+        "codex/implementation:cancelled"
+      ],
+      "checkExitCodes": [
+        1
+      ],
+      "recordedHandoffs": 0,
+      "eventCount": 13,
+      "diffSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "quota": {
+      "observedUTC": "2026-11-26T15:19:54+00:00",
+      "taskID": "D6DFEAA4-8295-4402-9601-4A7875B5A552",
+      "state": "completed",
+      "sourceBaseline": "add7210a536d15a72c80760fba784a39a3cbc6e1",
+      "integratedCommit": "71f496cf03bb6cabcfd54e697fe960c6bbe2780b",
+      "sourceUnchanged": true,
+      "changedFiles": [
+        "status.txt"
+      ],
+      "attempts": [
+        "codex/implementation:failed",
+        "codex/implementation:failed",
+        "antigravity/implementation:succeeded"
+      ],
+      "checkExitCodes": [
+        1,
+        0
+      ],
+      "recordedHandoffs": 4,
+      "eventCount": 36,
+      "diffSHA256": "4ab82147e712fd1b137ec7df6de870c12f4439a3be066748057d82d60ef36bbc"
+    },
+    "restart": {
+      "observedUTC": "2026-11-26T15:19:47+00:00",
+      "taskID": "B5F37DF9-47B6-4D7B-B849-49F4AEA340F6",
+      "state": "completed",
+      "sourceBaseline": "add7210a536d15a72c80760fba784a39a3cbc6e1",
+      "integratedCommit": "b83d7d98a1232166d93c8c61b98f6e79eebd4bd6",
+      "sourceUnchanged": true,
+      "changedFiles": [
+        "status.txt"
+      ],
+      "attempts": [
+        "codex/implementation:interrupted",
+        "codex/implementation:succeeded"
+      ],
+      "checkExitCodes": [
+        1,
+        0
+      ],
+      "recordedHandoffs": 3,
+      "eventCount": 29,
+      "diffSHA256": "4ab82147e712fd1b137ec7df6de870c12f4439a3be066748057d82d60ef36bbc"
+    }
+  },
+  "live": {
+    "antigravityInitial": {
+      "observedUTC": "2026-11-26T15:16:08+00:00",
+      "taskID": "7390E701-5E47-4D1D-87A7-4604D7196039",
+      "state": "completed",
+      "sourceBaseline": "bd8b7a8fc773be0138f87d761605c354394bf08f",
+      "integratedCommit": "e8c0cb624dea1d30caebb77c0dcfcd12492f7f2e",
+      "sourceUnchanged": true,
+      "changedFiles": [
+        "status.txt"
+      ],
+      "attempts": [
+        "antigravity/implementation:succeeded"
+      ],
+      "checkExitCodes": [
+        1,
+        0
+      ],
+      "recordedHandoffs": 1,
+      "eventCount": 45,
+      "diffSHA256": "4ab82147e712fd1b137ec7df6de870c12f4439a3be066748057d82d60ef36bbc",
+      "cliVersion": "1.5.18",
+      "auth": "provider-reported official subscription route",
+      "inputTokens": 21334,
+      "outputTokens": 2790,
+      "sessionObserved": true
+    },
+    "antigravityScoped": {
+      "observedUTC": "2026-11-26T15:22:03+00:00",
+      "taskID": "0CD0FA0E-ACA8-4AD5-B325-1054A55B5B7C",
+      "state": "completed",
+      "sourceBaseline": "a2d758da8167b822142e4c299ed9b9b35af882ba",
+      "integratedCommit": "2b2585581c92fc5642197ef65c87ab16392375ff",
+      "sourceUnchanged": true,
+      "changedFiles": [
+        "status.txt"
+      ],
+      "attempts": [
+        "antigravity/implementation:succeeded"
+      ],
+      "checkExitCodes": [
+        1,
+        0
+      ],
+      "recordedHandoffs": 1,
+      "eventCount": 35,
+      "diffSHA256": "4ab82147e712fd1b137ec7df6de870c12f4439a3be066748057d82d60ef36bbc",
+      "cliVersion": "1.5.18",
+      "auth": "provider-reported official subscription route",
+      "inputTokens": 20257,
+      "outputTokens": 2361,
+      "sessionObserved": true
+    },
+    "codexDirect": {
+      "cliVersion": "0.170.0",
+      "auth": "ChatGPT",
+      "observedUTC": "2026-11-26T15:07:46+00:00",
+      "exitCode": 0,
+      "stdoutSHA256": "c3a4e76c022f4f7fd4013df4e23319bcb9882ed0dcb8391db85ba8c6344b3b68",
+      "events": [
+        "thread.started",
+        "turn.started",
+        "item.completed",
+        "item.started",
+        "item.completed",
+        "item.completed",
+        "turn.completed"
+      ],
+      "reportedUsage": {
+        "input_tokens": 52552,
+        "cached_input_tokens": 39680,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 162,
+        "reasoning_output_tokens": 0
+      },
+      "managedFileBytes": "verified\n",
+      "sourceFileBytes": "pending\n",
+      "sourceClean": true
+    },
+    "dsh": {
+      "cliVersion": "0.2.0-rc.2",
+      "observedUTC": "2026-11-26T15:16:58+00:00",
+      "credentialPresence": "Agent Hub Keychain entry absent",
+      "status": "skipped",
+      "modelAttempts": 0
+    },
+    "team": {
+      "observedUTC": "2026-11-26T15:25:52.922+00:00",
+      "taskID": "CCD0267C-388B-45DE-8661-378E6C8E5EFA",
+      "state": "completed",
+      "sourceBaseline": "c3c0b289651bbae8062c5048c1ea97fb7c7bb7ec",
+      "integratedCommit": "4dc265e82cb6718ef80b6e61915f91c2580ac813",
+      "sourceUnchanged": true,
+      "changedFiles": [
+        "backend.txt",
+        "frontend.txt"
+      ],
+      "attempts": [
+        {
+          "role": "lead",
+          "provider": "codex",
+          "attempt": "DF2D05D8-B5FA-4FFB-964E-2A83E43AA730",
+          "state": "succeeded",
+          "sessionObserved": true,
+          "changed": [],
+          "inputTokens": 40062,
+          "outputTokens": 357,
+          "kernelStartUTC": "2026-11-26T15:24:43.800+00:00",
+          "terminalObservedUTC": "2026-11-26T15:25:08.119+00:00"
+        },
+        {
+          "role": "frontend",
+          "provider": "antigravity",
+          "attempt": "1AE8C9DE-C3C7-4945-A687-1DE66A1C75A0",
+          "state": "succeeded",
+          "sessionObserved": true,
+          "changed": [
+            "frontend.txt"
+          ],
+          "inputTokens": 20907,
+          "outputTokens": 2597,
+          "kernelStartUTC": "2026-11-26T15:25:11.585+00:00",
+          "terminalObservedUTC": "2026-11-26T15:25:47.268+00:00"
+        },
+        {
+          "role": "backend",
+          "provider": "codex",
+          "attempt": "8BFE8D5A-683F-4CAF-B128-B409C555E599",
+          "state": "succeeded",
+          "sessionObserved": true,
+          "changed": [
+            "backend.txt"
+          ],
+          "inputTokens": 41689,
+          "outputTokens": 162,
+          "kernelStartUTC": "2026-11-26T15:25:11.665+00:00",
+          "terminalObservedUTC": "2026-11-26T15:25:29.943+00:00"
+        }
+      ],
+      "checks": [
+        {
+          "name": "Baseline · Check 1 · /usr/bin/grep",
+          "exitCode": 1,
+          "snapshot": "c3c0b289651bbae8062c5048c1ea97fb7c7bb7ec"
+        },
+        {
+          "name": "Baseline · Check 2 · /usr/bin/grep",
+          "exitCode": 1,
+          "snapshot": "c3c0b289651bbae8062c5048c1ea97fb7c7bb7ec"
+        },
+        {
+          "name": "Check 1 · /usr/bin/grep",
+          "exitCode": 0,
+          "snapshot": "4dc265e82cb6718ef80b6e61915f91c2580ac813"
+        },
+        {
+          "name": "Check 2 · /usr/bin/grep",
+          "exitCode": 0,
+          "snapshot": "4dc265e82cb6718ef80b6e61915f91c2580ac813"
+        }
+      ],
+      "overlap": {
+        "kernelIdentitySampleUTC": "2026-11-26T15:25:11Z",
+        "workerKernelStartToTerminalWindowUTC": [
+          "2026-11-26T15:25:11.665+00:00",
+          "2026-11-26T15:25:29.943+00:00"
+        ],
+        "windowSeconds": 18.279
+      },
+      "eventCount": 68,
+      "diffSHA256": "f732cf426eb4a563010f233e5dee582e24795566d5c6b39dc91ebe47ff1c8072"
+    }
+  }
+}

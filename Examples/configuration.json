@@ -1,0 +1,21 @@
+{
+  "roles": {
+    "lead": "codex",
+    "frontend": "antigravity",
+    "backend": "codex",
+    "test": "dsh",
+    "review": "codex"
+  },
+  "maxConcurrent": 2,
+  "providerConcurrency": {
+    "codex": 1,
+    "antigravity": 1,
+    "dsh": 1
+  },
+  "maxAttempts": 12,
+  "maxRetries": 2,
+  "maxRepairs": 2,
+  "maxSeconds": 3600,
+  "paidProviders": [],
+  "allowedFallbacks": []
+}

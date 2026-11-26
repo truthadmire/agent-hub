@@ -1,0 +1,24 @@
+name: DesktopUI
+options:
+  deploymentTarget:
+    macOS: "14.0"
+targets:
+  DesktopUI:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - Tests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.agenthub.desktop.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        SWIFT_VERSION: "5.0"
+schemes:
+  DesktopUI:
+    build:
+      targets:
+        DesktopUI: [test]
+    test:
+      targets: [DesktopUI]

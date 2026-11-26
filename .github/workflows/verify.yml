@@ -1,0 +1,24 @@
+name: Verify
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  macos:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Check sources and run offline tests
+        run: |
+          set -eu
+          for script in script/*.sh scripts/*.sh; do bash -n "$script"; done
+          plutil -lint Packaging/Info.plist
+          swift test
+          ./scripts/smoke.sh --fixture gallery
+      - name: Build and verify the Apple Silicon development distribution
+        run: ./scripts/release.sh local
