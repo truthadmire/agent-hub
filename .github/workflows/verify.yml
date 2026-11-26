@@ -10,7 +10,7 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Check sources and run offline tests
@@ -22,3 +22,5 @@ jobs:
           ./scripts/smoke.sh --fixture gallery
       - name: Build and verify the Apple Silicon development distribution
         run: ./scripts/release.sh local
+      - name: Observe first launch and automatic CLI detection on the runner
+        run: ./scripts/verify-first-launch.sh dist/local/*/"Agent Hub.app"

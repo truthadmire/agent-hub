@@ -2,11 +2,13 @@
 
 Agent Hub 是一个中文 macOS 工作台。把一个本地 Git 仓库和开发目标交给工作台，即可在同一张任务卡里查看 Codex、Antigravity 和 DeepSeek Harness 的分工、文件修改与验证结果。应用使用 MIT 许可证，模型调用使用你自己的账号或 API 预算。
 
-![Agent Hub 在 macOS 上的项目导入和连接界面](docs/images/desktop-welcome.png)
+![Agent Hub 双面板显示 Antigravity 前端和 Codex 后端的实际任务记录](docs/images/desktop-live-team.png)
+
+图中是签名安装副本打开的一次真实协作记录。两名 worker 分别修改一个文件，集成后的两项检查均通过。[实测记录](docs/smoke.md)
 
 ## 安装
 
-首版面向 Apple Silicon，最低部署目标是 macOS 14。已运行验证的系统和安装包状态见[验证记录](docs/verification.md)。正式发行流程生成带 Apple 公证票据的 DMG。开发者可直接从源码构建应用。
+首版面向 Apple Silicon，最低部署目标是 macOS 14。0.1.0 已生成 Developer ID 签名的本地 DMG，Apple 公证与公开安装包发布已延期。现在可从公开源码构建使用。[验证记录](docs/verification.md) · [GitHub 仓库](https://github.com/truthadmire/agent-hub)
 
 ```sh
 ./script/build_and_run.sh --verify
