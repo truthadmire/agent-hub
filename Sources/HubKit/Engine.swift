@@ -48,7 +48,7 @@ public actor HubEngine {
         defer { held.remove(taskID); kick() }
         await PreviewManager.shared.stop(taskID: taskID)
         try await reconcileSavedWork(task)
-        guard try store.task(taskID).state == task.state else { return }
+        guard !stopping, try store.task(taskID).state == task.state else { return }
         let effective = try store.effectiveConfiguration(for: task)
         try store.updateTask(taskID, kind: "task.resumed", detail: "已从保存的工作树继续。中断的步骤将在新的 CLI 会话中执行。") { t in
             t.runtimeConfig = t.runtimeConfig ?? effective
@@ -93,6 +93,8 @@ public actor HubEngine {
 
     public func changeRequirements(_ taskID: String, goal: String, acceptance: [String]) async throws {
         guard !goal.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw EngineError("请输入任务目标。") }
+        let previous = try store.task(taskID)
+        guard previous.goal != goal || previous.acceptance != acceptance else { return }
         try await revise(taskID, reason: "用户已修改任务目标或验收条件。") { t in
             t.goal = goal
             t.acceptance = acceptance
@@ -101,6 +103,7 @@ public actor HubEngine {
 
     public func addDecision(_ taskID: String, text: String) async throws {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw EngineError("请输入需要共享的决定。") }
+        guard try store.task(taskID).decisions.last != text else { return }
         try await revise(taskID, reason: "已更新共享决定，计划将据此重新制定。") { $0.decisions.append(text) }
     }
 

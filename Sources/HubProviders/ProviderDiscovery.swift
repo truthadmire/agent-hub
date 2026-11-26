@@ -139,8 +139,7 @@ public enum ProviderDiscovery {
         let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".gemini/antigravity-cli/settings.json")
         return jsonFile(url) ?? [:]
     }
-    static func agyUsesAlternateBilling() -> Bool {
-        let settings = agySettings
+    static func agyUsesAlternateBilling(_ settings: [String:Any] = agySettings) -> Bool {
         let selected = (settings["modelProvider"] as? String)?.lowercased()
         let auth = (settings["auth"] as? [String:Any])?["type"] as? String
         return selected == "gemini" || ["gemini-api-key","agent-platform","oauth-business"].contains(auth ?? "")

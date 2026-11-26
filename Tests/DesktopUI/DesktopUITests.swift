@@ -9,6 +9,7 @@ final class DesktopUITests: XCTestCase {
         let captureInbox: String
         let evidence: String
         let gallery: String?
+        let galleryTitle: String?
         var repository: String { work + "/Field Notes" }
     }
 
@@ -36,14 +37,14 @@ final class DesktopUITests: XCTestCase {
         element("board.import", in: app).click()
         let choose = app.buttons["导入项目"].firstMatch
         // The go-to-folder sheet belongs to the app's own attached NSOpenPanel.
-        let sheet = app.sheets.firstMatch
-        XCTAssertTrue(sheet.waitForExistence(timeout: 5))
+        let sheet = element("open-panel", in: app)
+        XCTAssertTrue(sheet.waitForExistence(timeout: 12))
         app.typeKey("g", modifierFlags: [.command, .shift])
         app.typeText(run.repository)
         app.typeKey(.return, modifierFlags: [])
         XCTAssertTrue(choose.waitForExistence(timeout: 5))
         // Resolve the button inside the open panel, apart from the welcome view.
-        let confirm = sheet.buttons["导入项目"].firstMatch
+        let confirm = element("OKButton", in: app)
         XCTAssertTrue(confirm.waitForExistence(timeout: 5))
         confirm.click()
         XCTAssertTrue(element("board.newTask", in: app).waitForExistence(timeout: 15))
@@ -64,14 +65,18 @@ final class DesktopUITests: XCTestCase {
         app.launchArguments = ["-ApplePersistenceIgnoreState", "YES"]
         app.launch()
         addTeardownBlock { @MainActor in if app.state != .notRunning { app.terminate() } }
-        let card = app.buttons.matching(NSPredicate(format: "label == %@", "打开任务，fixture-gallery")).firstMatch
+        let title = try XCTUnwrap(run.galleryTitle)
+        let cards = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "打开任务，"))
+        XCTAssertTrue(cards.firstMatch.waitForExistence(timeout: 10))
+        XCTAssertEqual(cards.count, 1)
+        let card = app.buttons.matching(NSPredicate(format: "label == %@", "打开任务，" + title)).firstMatch
         XCTAssertTrue(card.waitForExistence(timeout: 10))
         card.click()
         let front = element("workspace.draft.frontend", in: app)
         let back = element("workspace.draft.backend", in: app)
         XCTAssertTrue(front.waitForExistence(timeout: 8))
         XCTAssertTrue(back.exists)
-        try capture(app.windows.firstMatch, "07-paired-fixture", run: run)
+        try capture(app.windows.firstMatch, title == "live-team" ? "07-paired-live" : "07-paired-fixture", run: run)
         front.click()
         front.typeText("Keep the layout")
         back.click()
@@ -98,7 +103,7 @@ final class DesktopUITests: XCTestCase {
         app.launchEnvironment = [
             "AGENTHUB_DATA_DIR": run.work + "/data", "HOME": home, "CFFIXED_USER_HOME": home
         ]
-        app.launchArguments = ["-ApplePersistenceIgnoreState", "YES", "-NSQuitAlwaysKeepsWindows", "NO"]
+        app.launchArguments = ["-ApplePersistenceIgnoreState", "YES", "-NSQuitAlwaysKeepsWindows", "NO", "-NSNavLastRootDirectory", run.work]
         app.launch()
         addTeardownBlock { @MainActor in if app.state != .notRunning { app.terminate() } }
         let welcome = element("board.import", in: app)

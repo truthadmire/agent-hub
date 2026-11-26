@@ -121,7 +121,7 @@ final class ProviderTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at:root) }
         let prompt = "line one\n'$HOME' \"工作\""
         for id in ProviderID.allCases {
-            let adapter = ProviderAdapter(id,stateDirectory:root,deepSeekKey:{ "sentinel" })
+            let adapter = ProviderAdapter(id,stateDirectory:root,antigravitySettings:Data("{}".utf8),deepSeekKey:{ "sentinel" })
             let command = try adapter.command(executable:URL(fileURLWithPath:"/usr/bin/true"),workspace:root,
                                               prompt:prompt,sessionID:id == .dsh ? "session-" + sid : sid,readOnly:true)
             XCTAssertFalse(command.arguments.contains(prompt))

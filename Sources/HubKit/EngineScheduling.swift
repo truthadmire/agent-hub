@@ -46,7 +46,10 @@ extension HubEngine {
         var result: [String: ProviderID] = [:]
         for role in config.enabledRoles ?? PlanRules.roles {
             guard let primary = config.roles[role] else { continue }
-            if ready[primary] != nil { result[role] = primary; continue }
+            if let connected = ready[primary], !connected.paid || (config.paidProviders ?? []).contains(primary) {
+                result[role] = primary
+                continue
+            }
             // A single connected subscription can do suitable work without buying another source.
             if ready.count == 1, let single = ready.first, !single.value.paid {
                 result[role] = single.key
@@ -222,6 +225,7 @@ extension HubEngine {
             task.phase = planned ? .planning : (repairing ? .repairing : .implementing)
             if let ix = task.plan?.items.firstIndex(where: { $0.id == item.id }) {
                 task.plan?.items[ix].state = .running
+                task.plan?.items[ix].provider = snapshot.provider
                 task.plan?.items[ix].workspace = snapshot.workspace
             }
             task.attempts.append(snapshot)

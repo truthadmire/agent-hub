@@ -47,7 +47,7 @@ public final class HubStore: @unchecked Sendable {
     private var inTransaction = false
     public var changeCounter: Int64 { synchronized { sqlite3_total_changes64(db) } }
     public let directory: URL
-    private static let schemaVersion: Int64 = 2
+    private static let schemaVersion: Int64 = 3
     private static let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
     public init(directory: URL, exclusiveOwner: Bool = true) throws {
@@ -80,7 +80,7 @@ public final class HubStore: @unchecked Sendable {
         let version = try query("PRAGMA user_version") { sqlite3_column_int64($0, 0) }.first ?? 0
         guard version <= Self.schemaVersion else { throw HubStoreError.incompatible(version) }
         try executeSQL("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL")
-        if version > 0 && version < Self.schemaVersion { try backup(version: version) }
+        if version > 0 && version < Self.schemaVersion { try backup() }
         try migrate(from: version)
     }
 
@@ -89,8 +89,8 @@ public final class HubStore: @unchecked Sendable {
         if ownerFD >= 0 { close(ownerFD) }
     }
 
-    private func backup(version: Int64) throws {
-        let file = directory.appendingPathComponent("before-v\(version + 1)-\(UUID().uuidString).sqlite3")
+    private func backup() throws {
+        let file = directory.appendingPathComponent("before-v\(Self.schemaVersion)-\(UUID().uuidString).sqlite3")
         var output: OpaquePointer?
         let result = sqlite3_open_v2(file.path, &output, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nil)
         defer { if let output { sqlite3_close(output) } }
@@ -145,6 +145,18 @@ public final class HubStore: @unchecked Sendable {
                 if version > 0 {
                     for task in try tasks() { try saveRevisions(task, previous: nil) }
                 }
+            }
+            if version < 3 {
+                try executeSQL("""
+                ALTER TABLE events ADD COLUMN provider_type TEXT;
+                CREATE TABLE final_streams (
+                    task_id TEXT NOT NULL REFERENCES tasks(id), attempt_id TEXT NOT NULL,
+                    stream_id TEXT NOT NULL, message_id TEXT NOT NULL REFERENCES messages(id),
+                    PRIMARY KEY(task_id,attempt_id,stream_id)
+                );
+                PRAGMA user_version=3;
+                """)
+                if version > 0 { try backfillFinalStreams() }
             }
         }
     }
@@ -426,27 +438,27 @@ public final class HubStore: @unchecked Sendable {
 
     /// Subsequent events for a superseded attempt keep that attempt's original revision and generation.
     public func appendEvent(taskID: String, kind: String, detail: String, attemptID: String? = nil,
-                            eventID: String = UUID().uuidString) throws {
+                            eventID: String = UUID().uuidString, providerEventType: String? = nil) throws {
         try transaction {
             let task = try task(taskID)
-            try insertEvent(task: task, kind: kind, detail: detail, attemptID: attemptID, eventID: eventID)
+            try insertEvent(task: task, kind: kind, detail: detail, attemptID: attemptID, eventID: eventID, providerEventType: providerEventType)
         }
     }
 
     private func insertEvent(task: HubTask, kind: String, detail: String, attemptID: String?,
-                             eventID: String = UUID().uuidString) throws {
+                             eventID: String = UUID().uuidString, providerEventType: String? = nil) throws {
         let attempt = task.attempts.first { $0.id == attemptID }
-        let safeKind = String(HubRedaction.text(kind).prefix(128))
-        let safeDetail = HubRedaction.text(detail)
-        let capped = String(decoding: safeDetail.utf8.prefix(8192), as: UTF8.self)
+        let safeKind = boundedRedacted(kind, bytes: 128)
+        let capped = boundedRedacted(detail, bytes: 8192)
+        let rawType = providerEventType.map { boundedRedacted($0, bytes: 128) }
         try write("""
-            INSERT INTO events(id,task_id,attempt_id,requirement,plan,generation,time,kind,detail)
-            VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING
+            INSERT INTO events(id,task_id,attempt_id,requirement,plan,generation,time,kind,detail,provider_type)
+            VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING
             """, [.text(eventID), .text(task.id), attemptID.map(Value.text) ?? .null,
                   .integer(Int64(attempt?.requirementRevision ?? task.requirementRevision)),
                   .integer(Int64(attempt?.planRevision ?? task.planRevision)),
                   .integer(Int64(attempt?.generation ?? task.generation)),
-                  .real(Date().timeIntervalSince1970), .text(safeKind), .text(capped)])
+                  .real(Date().timeIntervalSince1970), .text(safeKind), .text(capped), rawType.map(Value.text) ?? .null])
         // Periodic pruning keeps the per-task feed bounded without recounting it on every append.
         guard sqlite3_changes(db) > 0 else { return }
         let count = try query("""
@@ -461,6 +473,17 @@ public final class HubStore: @unchecked Sendable {
             """, [.text(task.id), .text(task.id)])
     }
 
+    private func boundedRedacted(_ source: String, bytes limit: Int) -> String {
+        let safe = HubRedaction.text(source)
+        guard safe.utf8.count > limit else { return safe }
+        var bytes = safe.utf8.prefix(limit)
+        while let last = bytes.last, (0x80...0xBF).contains(last) || last >= 0xC0 {
+            if let valid = String(bytes: bytes, encoding: .utf8) { return valid }
+            bytes = bytes.dropLast()
+        }
+        return String(decoding: bytes, as: UTF8.self)
+    }
+
     private func pageLimit(_ limit: Int) -> Value { .integer(Int64(min(max(1, limit), 500))) }
 
     private func readEvent(_ statement: OpaquePointer) -> HubEvent {
@@ -468,10 +491,11 @@ public final class HubStore: @unchecked Sendable {
                  taskID: string(statement, 2), attemptID: sqlite3_column_type(statement, 3) == SQLITE_NULL ? nil : string(statement, 3),
                  requirementRevision: Int(sqlite3_column_int64(statement, 4)), planRevision: Int(sqlite3_column_int64(statement, 5)),
                  generation: Int(sqlite3_column_int64(statement, 6)), createdAt: Date(timeIntervalSince1970: sqlite3_column_double(statement, 7)),
-                 kind: string(statement, 8), detail: string(statement, 9))
+                 kind: string(statement, 8), detail: string(statement, 9),
+                 providerEventType: sqlite3_column_type(statement, 10) == SQLITE_NULL ? nil : string(statement, 10))
     }
 
-    private var eventColumns: String { "SELECT seq,id,task_id,attempt_id,requirement,plan,generation,time,kind,detail FROM events" }
+    private var eventColumns: String { "SELECT seq,id,task_id,attempt_id,requirement,plan,generation,time,kind,detail,provider_type FROM events" }
 
     public func events(taskID: String, after: Int64 = 0, limit: Int = 200) throws -> [HubEvent] {
         try synchronized {
@@ -500,13 +524,22 @@ public final class HubStore: @unchecked Sendable {
                                           : "attempt_id IN (SELECT value FROM json_each(?))"
             // Select the final visible snapshot for each text stream across its entire history before
             // applying the page cursor. Otherwise a second page could redisplay the same utterance.
-            var sql = eventColumns + """
-                 WHERE seq IN (
-                   SELECT MAX(seq) FROM events WHERE task_id=? AND
+            var sql = """
+                WITH grouped AS (
+                    SELECT MAX(seq) AS seq,task_id,attempt_id,kind,
+                           CASE WHEN kind='provider.text' AND id LIKE 'text/%' AND substr(id,-37,1)='/'
+                                THEN substr(id,1,length(id)-37) ELSE id END AS stream_id
+                    FROM events WHERE task_id=? AND
                 """ + " " + filter + """
                  AND kind NOT IN ('message.queued','message.delivered','message.processed')
-                 GROUP BY CASE WHEN kind='provider.text' AND id LIKE 'text/%' AND substr(id,-37,1)='/'
-                   THEN substr(id,1,length(id)-37) ELSE id END
+                 GROUP BY task_id,attempt_id,kind,stream_id
+                )
+                """ + " " + eventColumns + """
+                 WHERE seq IN (
+                    SELECT seq FROM grouped WHERE kind!='provider.text' OR NOT EXISTS (
+                        SELECT 1 FROM final_streams AS f WHERE f.task_id=grouped.task_id
+                        AND f.attempt_id=grouped.attempt_id AND f.stream_id=grouped.stream_id
+                    )
                 )
                 """
             var args: [Value] = [.text(taskID), .text(identifiers)]
@@ -557,11 +590,74 @@ public final class HubStore: @unchecked Sendable {
                 INSERT INTO messages(id,task_id,sender,recipient,payload) VALUES(?,?,?,?,?) ON CONFLICT(id) DO NOTHING
                 """, [.text(message.id), .text(task.id), .text(message.sender), .text(message.recipient), try encoded(message)])
             guard sqlite3_changes(db) > 0 else { return }
+            try indexFinalStream(for: message, task: task)
             if clearDraft {
                 try write("DELETE FROM drafts WHERE task_id=? AND recipient=? AND text=?",
                           [.text(task.id), .text(message.recipient), .text(HubRedaction.text(message.text))])
             }
             try insertEvent(task: task, kind: "message." + message.delivery.rawValue, detail: message.recipient, attemptID: nil)
+        }
+    }
+
+    /// A reply replaces only the stream that produced it. Raw event history is never removed here.
+    private func indexFinalStream(for message: HubMessage, task: HubTask) throws {
+        guard message.sender != "user", message.recipient == "user", message.delivery == .processed else { return }
+        let attemptID: String
+        let group: String
+        if let explicitID = message.attemptID {
+            guard let explicitGroup = message.finalStreamGroup,
+                  explicitGroup.hasPrefix("text/" + explicitID + "/"),
+                  task.attempts.contains(where: { $0.id == explicitID && $0.role == message.sender && $0.requirementRevision == message.requirementRevision })
+            else { return }
+            attemptID = explicitID
+            group = explicitGroup
+        } else {
+            // Older records lack a direct link. Only a unique matching completed round and its very
+            // last text event can be replaced. Keep ambiguous evidence visible.
+            guard let item = message.itemID else { return }
+            let eligible = task.attempts.filter { $0.itemID == item && $0.role == message.sender && $0.requirementRevision == message.requirementRevision }
+            let candidates = eligible.filter { attempt in
+                guard let end = attempt.endedAt, let summary = attempt.summary, summary == message.text,
+                      message.sessionID == nil || attempt.providerSessionID == message.sessionID else { return false }
+                let delta = message.createdAt.timeIntervalSince(end)
+                return (0...120).contains(delta) && !eligible.contains(where: {
+                    $0.id != attempt.id && $0.startedAt > attempt.startedAt && $0.startedAt <= message.createdAt
+                })
+            }
+            guard candidates.count == 1, let attempt = candidates.first,
+                  let last = try query("""
+                     SELECT id,detail FROM events WHERE task_id=? AND attempt_id=? AND kind='provider.text'
+                     ORDER BY seq DESC LIMIT 1
+                     """, [.text(task.id), .text(attempt.id)], row: { (string($0, 0), string($0, 1)) }).first,
+                  !last.1.isEmpty, message.text.hasPrefix(last.1) || message.text.hasSuffix(last.1) else { return }
+            attemptID = attempt.id
+            if last.0.hasPrefix("text/" + attempt.id + "/"), let slash = last.0.lastIndex(of: "/"),
+               UUID(uuidString: String(last.0[last.0.index(after: slash)...])) != nil {
+                group = String(last.0[..<slash])
+            } else {
+                group = last.0
+            }
+        }
+        try write("""
+            INSERT INTO final_streams(task_id,attempt_id,stream_id,message_id) VALUES(?,?,?,?)
+            ON CONFLICT(task_id,attempt_id,stream_id) DO NOTHING
+            """, [.text(task.id), .text(attemptID), .text(group), .text(message.id)])
+    }
+
+    private func backfillFinalStreams() throws {
+        var cursor: Int64 = 0
+        var cachedTask: HubTask?
+        while true {
+            let page = try query("""
+                SELECT seq,payload FROM messages WHERE sender!='user' AND recipient='user' AND seq>?
+                ORDER BY seq LIMIT 100
+                """, [.integer(cursor)], row: readMessage)
+            guard let last = page.last else { return }
+            for message in page {
+                if cachedTask?.id != message.taskID { cachedTask = try task(message.taskID) }
+                if let cachedTask { try indexFinalStream(for: message, task: cachedTask) }
+            }
+            cursor = last.sequence
         }
     }
 

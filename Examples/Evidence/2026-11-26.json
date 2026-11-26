@@ -25,11 +25,11 @@
       "diffSHA256": "4ab82147e712fd1b137ec7df6de870c12f4439a3be066748057d82d60ef36bbc"
     },
     "gallery": {
-      "observedUTC": "2026-11-26T15:19:57+00:00",
-      "taskID": "85289E1A-C79E-458D-B16F-B54C82F382BB",
+      "observedUTC": "2026-11-26T15:27:43+00:00",
+      "taskID": "50C002B9-1AAC-4A12-9FE5-BD44B3AB9F2E",
       "state": "completed",
-      "sourceBaseline": "9b94c2a1c37b83d7b72668155f9ccfdf8552d203",
-      "integratedCommit": "368a8f66eefa234124f64345b4956f9eeefccf19",
+      "sourceBaseline": "6642dc3f39bbbcaf557305897d550bf738cbc1fe",
+      "integratedCommit": "20e8eb45ab2da57f05e8642b45cb62c6e9a22830",
       "sourceUnchanged": true,
       "changedFiles": [
         "catalog.py",
@@ -62,7 +62,8 @@
         "pages": 2
       },
       "emptyPageObserved": true,
-      "finalTestOutput": "test_index_and_api (test_baseline.Baseline.test_index_and_api) ... ok\ntest_empty_and_invalid (test_filter.FilteredIndex.test_empty_and_invalid) ... ok\ntest_filter_then_paginate (test_filter.FilteredIndex.test_filter_then_paginate) ... ok\ntest_html (test_filter.FilteredIndex.test_html) ... ok\n\n----------------------------------------------------------------------\nRan 4 tests in 0.000s\n\nOK"
+      "finalTestOutput": "test_index_and_api (test_baseline.Baseline.test_index_and_api) ... ok\ntest_empty_and_invalid (test_filter.FilteredIndex.test_empty_and_invalid) ... ok\ntest_filter_then_paginate (test_filter.FilteredIndex.test_filter_then_paginate) ... ok\ntest_html (test_filter.FilteredIndex.test_html) ... ok\n\n----------------------------------------------------------------------\nRan 4 tests in 0.000s\n\nOK",
+      "entryCommand": "scripts/smoke.sh --fixture gallery"
     },
     "repair": {
       "observedUTC": "2026-11-26T15:16:45+00:00",

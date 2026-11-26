@@ -414,6 +414,7 @@ public struct HubEvent: Identifiable, Codable, Equatable, Sendable {
     public var createdAt: Date
     public var kind: String
     public var detail: String
+    public var providerEventType: String?
 }
 
 public struct HubMessage: Identifiable, Codable, Equatable, Sendable {
@@ -422,6 +423,8 @@ public struct HubMessage: Identifiable, Codable, Equatable, Sendable {
     public var taskID: String
     public var sender: String
     public var recipient: String
+    public var attemptID: String?
+    public var finalStreamGroup: String?
     public var itemID: String?
     public var sessionID: String?
     public var text: String

@@ -2,7 +2,7 @@
 # Run GUI checks only on an explicitly selected packaged Agent Hub.
 set -euo pipefail
 if [[ $# -lt 2 || $# -gt 3 || ! -d "$1" || -e "$2" ]]; then
-  echo 'usage: scripts/ui-smoke.sh "/path/to/Agent Hub.app" /new/evidence-directory [gallery-fixture-data-directory]' >&2
+  echo 'usage: scripts/ui-smoke.sh "/path/to/Agent Hub.app" /new/evidence-directory [completed-example-data-directory]' >&2
   exit 2
 fi
 app=$(cd "$1" && pwd -P)
@@ -13,7 +13,7 @@ source_root=$(cd "$(dirname "$0")/../Tests/DesktopUI" && pwd -P)
 mkdir -p "$2"
 evidence=$(cd "$2" && pwd -P)
 work=$(mktemp -d "${TMPDIR:-/tmp}/agent-hub-gui.XXXXXX")
-mkdir -p "$work/Tests" "$work/data" "$work/home" "$work/Field Notes"
+mkdir -p "$work/Tests" "$work/data" "$work/home/"{Desktop,Documents,Downloads,Library/Preferences,Library/Caches} "$work/Field Notes"
 cp "$source_root/"*.swift "$work/Tests/"
 cp "$source_root/project.yml" "$work/"
 repo="$work/Field Notes"
@@ -33,18 +33,21 @@ plutil -insert captureInbox -string "$capture_inbox" "$plist"
 if [[ $# -eq 3 ]]; then
   gallery=$(cd "$3" && pwd -P)
   mkdir -p "$work/gallery-state"
-  python3 - "$gallery" "$work/gallery-state" <<'PYFIXTURE'
+  gallery_title=$(python3 - "$gallery" "$work/gallery-state" <<'PYFIXTURE'
 from pathlib import Path
 import json, sqlite3, sys
 source = Path(sys.argv[1]) / "agent-hub.sqlite3"
 target = Path(sys.argv[2]) / "agent-hub.sqlite3"
 with sqlite3.connect(source.as_uri() + "?mode=ro", uri=True) as original:
     tasks = [json.loads(row[0]) for row in original.execute("select payload from tasks")]
-    if len(tasks) != 1 or tasks[0]["title"] != "fixture-gallery" or tasks[0]["state"] != "completed":
-        raise SystemExit("Expected a completed HubSmoke gallery fixture with exactly one task.")
+    if len(tasks) != 1 or tasks[0]["title"] not in ("fixture-gallery", "live-team") or tasks[0]["state"] != "completed":
+        raise SystemExit("Expected a completed HubSmoke gallery or live-team example with exactly one task.")
     with sqlite3.connect(target) as copy:
         original.backup(copy)
+    print(tasks[0]["title"])
 PYFIXTURE
+  )
+  plutil -insert galleryTitle -string "$gallery_title" "$plist"
   plutil -insert gallery -string "$work/gallery-state" "$plist"
 fi
 cd "$work"

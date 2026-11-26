@@ -57,7 +57,7 @@ extension HubEngine {
         held.insert(taskID)
         defer { held.remove(taskID); kick() }
         await PreviewManager.shared.stop(taskID: taskID)
-        guard try store.task(taskID).state == t.state else { throw CancellationError() }
+        guard !stopping, try store.task(taskID).state == t.state else { throw CancellationError() }
         let work = try workspace(t), git = try service()
         guard try git.head(of: work) == t.workspace?.snapshot else {
             throw EngineError("整合工作树的 HEAD 已被其他操作更改。请先检查任务分支，再进行验证。")

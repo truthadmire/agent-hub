@@ -20,6 +20,7 @@ private final class AttemptJournal: @unchecked Sendable {
     var lastFailure: String?
     var journalError: Error?
     var lastTextAt = Date.distantPast
+    var latestTextGroup: String?
     var diagnostics = 0
 
     init(store: HubStore, taskID: String, attempt: HubAttempt, secrets: [String]) {
@@ -40,7 +41,11 @@ private final class AttemptJournal: @unchecked Sendable {
             case .failure: lastFailure = detail
             case .text:
                 // Snapshots replace one another. Preserve the authoritative final answer separately.
-                guard Date().timeIntervalSince(lastTextAt) >= 0.2 else { continue }
+                let key = Data((event.itemID ?? "message").utf8.prefix(128)).base64EncodedString()
+                let group = "text/" + attempt.id + "/" + key
+                let firstInGroup = latestTextGroup != group
+                latestTextGroup = group
+                guard firstInGroup || Date().timeIntervalSince(lastTextAt) >= 0.2 else { continue }
                 lastTextAt = Date()
                 detail = String(detail.suffix(5000))
             case .diagnostic:
@@ -49,12 +54,23 @@ private final class AttemptJournal: @unchecked Sendable {
             default: break
             }
             var eventID = UUID().uuidString
-            if event.kind == .text {
-                let key = Data((event.itemID ?? "message").utf8.prefix(128)).base64EncodedString()
-                eventID = "text/" + attempt.id + "/" + key + "/" + eventID
-            }
+            if event.kind == .text, let group = latestTextGroup { eventID = group + "/" + eventID }
             if event.kind == .permission { lastFailure = detail }
-            do { try store.appendEvent(taskID: taskID, kind: "provider." + event.kind.rawValue, detail: detail, attemptID: attempt.id, eventID: eventID) }
+            if event.kind == .session || event.kind == .usage {
+                do {
+                    try store.updateTask(taskID, kind: "attempt.metadata") { task in
+                        guard let ix = task.attempts.firstIndex(where: { $0.id == attempt.id }) else { return }
+                        if event.kind == .session { task.attempts[ix].providerSessionID = event.text }
+                        if event.kind == .usage {
+                            task.attempts[ix].inputTokens = inputTokens
+                            task.attempts[ix].outputTokens = outputTokens
+                            task.attempts[ix].usageObservedAt = Date()
+                            task.attempts[ix].usageSource = "CLI"
+                        }
+                    }
+                } catch { journalError = error }
+            }
+            do { try store.appendEvent(taskID: taskID, kind: "provider." + event.kind.rawValue, detail: detail, attemptID: attempt.id, eventID: eventID, providerEventType: event.rawType) }
             catch { journalError = error }
         }
     }
@@ -76,9 +92,9 @@ extension HubEngine {
             guard try same(t) else { throw CancellationError() }
             let adapter: ProviderAdapter
             if fixtures != nil {
-                adapter = ProviderAdapter(attempt.provider, stateDirectory: root.appendingPathComponent("fixture-provider-state"), deepSeekKey: { "fixture-only" })
+                adapter = ProviderAdapter(attempt.provider, stateDirectory: root.appendingPathComponent("fixture-provider-state"), antigravitySettings: Data("{}".utf8), deepSeekKey: { "fixture-only" })
             } else {
-                adapter = ProviderAdapter(attempt.provider)
+                adapter = ProviderAdapter(attempt.provider, stateDirectory: store.directory.appendingPathComponent("Providers", isDirectory: true))
             }
             let cmd = try adapter.command(executable: connection.url, workspace: work.path, prompt: prompt, model: attempt.model, readOnly: item.writeScope.isEmpty)
             let sink = AttemptJournal(store: store, taskID: t.id, attempt: attempt, secrets: [cmd.environment["DEEPSEEK_API_KEY"]].compactMap { $0 })
@@ -165,6 +181,8 @@ extension HubEngine {
         }
         if !answer.isEmpty {
             var message = HubMessage(taskID: t.id, sender: item.role, recipient: "user", text: answer, requirementRevision: t.requirementRevision)
+            message.attemptID = attempt.id
+            message.finalStreamGroup = journal?.latestTextGroup
             message.itemID = item.id
             message.sessionID = journal?.decoder.sessionID
             message.delivery = .processed

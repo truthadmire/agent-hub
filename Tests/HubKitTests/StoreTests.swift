@@ -185,6 +185,72 @@ final class StoreTests: XCTestCase {
         XCTAssertEqual(try store.recentEvents(taskID: task.id, attemptID: attempt).count, 3)
     }
 
+    func testAuthoritativeReplyReplacesOnlyItsExplicitStreamAcrossPages() throws {
+        let store = try HubStore(directory: directory)
+        let task = try seed(store)
+        let attempt = HubAttempt(itemID: "ui", provider: .codex, role: "frontend", requirementRevision: 1,
+                                 planRevision: 1, generation: 1)
+        _ = try store.updateTask(task.id, kind: "fixture.attempt") { $0.attempts = [attempt] }
+        let first = "text/" + attempt.id + "/first"
+        let final = "text/" + attempt.id + "/last"
+        for stream in [first, final] {
+            try store.appendEvent(taskID: task.id, kind: "provider.text", detail: "same body",
+                                  attemptID: attempt.id, eventID: stream + "/" + UUID().uuidString,
+                                  providerEventType: "item.completed")
+        }
+        var message = HubMessage(taskID: task.id, sender: "frontend", recipient: "user", text: "same body", requirementRevision: 1)
+        message.delivery = .processed
+        message.attemptID = attempt.id
+        message.finalStreamGroup = final
+        try store.saveMessage(message)
+        try store.appendEvent(taskID: task.id, kind: "provider.tool", detail: "tool after message", attemptID: attempt.id)
+        let latest = try XCTUnwrap(store.recentRoleEvents(taskID: task.id, attemptIDs: [attempt.id], includeTaskEvents: false, limit: 1).first)
+        let older = try store.recentRoleEvents(taskID: task.id, attemptIDs: [attempt.id], includeTaskEvents: false, before: latest.sequence)
+        XCTAssertEqual(older.count, 1)
+        XCTAssertTrue(older[0].id.hasPrefix(first + "/"))
+        XCTAssertEqual(older[0].providerEventType, "item.completed")
+        XCTAssertEqual(try store.events(taskID: task.id).filter { $0.kind == "provider.text" }.count, 2)
+        let reply = try XCTUnwrap(store.recentConversation(taskID: task.id, role: "frontend").first)
+        XCTAssertEqual(reply.attemptID, attempt.id)
+        XCTAssertEqual(reply.finalStreamGroup, final)
+        try store.appendEvent(taskID: task.id, kind: "provider.diagnostic", detail: "fixture", providerEventType: "api_key=test_fixture " + String(repeating: "文", count: 100))
+        let raw = try XCTUnwrap(store.recentEvents(taskID: task.id).last?.providerEventType)
+        XCTAssertFalse(raw.contains("test_fixture"))
+        XCTAssertLessThanOrEqual(raw.utf8.count, 128)
+    }
+
+    func testV2MigrationMatchesLegacyUUIDWithoutSessionAndPreservesOtherAttempts() throws {
+        var store: HubStore? = try HubStore(directory: directory)
+        let task = try seed(store!)
+        var first = HubAttempt(itemID: "ui", provider: .codex, role: "frontend", requirementRevision: 1,
+                               planRevision: 1, generation: 1)
+        first.endedAt = Date()
+        first.state = .succeeded
+        first.summary = "completed reply"
+        var second = first
+        second.id = UUID().uuidString
+        second.startedAt = first.startedAt.addingTimeInterval(60)
+        second.endedAt = second.startedAt.addingTimeInterval(2)
+        _ = try store!.updateTask(task.id, kind: "fixture.attempts") { $0.attempts = [first, second] }
+        let firstInterim = UUID().uuidString
+        let final = UUID().uuidString
+        let other = UUID().uuidString
+        for (attemptID, eventID) in [(first.id,firstInterim),(first.id,final),(second.id,other)] {
+            try store!.appendEvent(taskID: task.id, kind: "provider.text", detail: "completed", attemptID: attemptID, eventID: eventID)
+        }
+        var message = HubMessage(taskID: task.id, sender: "frontend", recipient: "user", text: "completed reply", requirementRevision: 1)
+        message.delivery = .processed
+        message.itemID = first.itemID
+        try store!.saveMessage(message)
+        store = nil
+        try executeDatabaseSQL("DROP TABLE final_streams; ALTER TABLE events DROP COLUMN provider_type; PRAGMA user_version=2")
+        let upgraded = try HubStore(directory: directory)
+        let visible = try upgraded.recentRoleEvents(taskID: task.id, attemptIDs: [first.id,second.id], includeTaskEvents: false)
+        XCTAssertEqual(visible.map(\.id), [firstInterim, other])
+        XCTAssertEqual(try upgraded.recentEvents(taskID: task.id, attemptID: first.id).map(\.id), [firstInterim, final])
+        XCTAssertNil(visible[0].providerEventType)
+    }
+
     func testBoardRefreshOnlyReturnsChangedTasksEvenWhenMessagesArrive() throws {
         let store = try HubStore(directory: directory)
         let first = try seed(store)
@@ -281,16 +347,16 @@ final class StoreTests: XCTestCase {
         var store: HubStore? = try HubStore(directory: directory)
         let task = try seed(store!)
         store = nil
-        try executeDatabaseSQL("DROP TABLE requirements; DROP TABLE plans; DROP TABLE event_counters; DROP INDEX tasks_change; PRAGMA user_version=1")
+        try executeDatabaseSQL("DROP TABLE final_streams; ALTER TABLE events DROP COLUMN provider_type; DROP TABLE requirements; DROP TABLE plans; DROP TABLE event_counters; DROP INDEX tasks_change; PRAGMA user_version=1")
         store = try HubStore(directory: directory)
         XCTAssertEqual(try store!.requirementHistory(taskID: task.id).first?.goal, task.goal)
-        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: directory.path).contains { $0.hasPrefix("before-v2-") })
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: directory.path).contains { $0.hasPrefix("before-v3-") })
         store = nil
         try executeDatabaseSQL("PRAGMA user_version=99")
         XCTAssertThrowsError(try HubStore(directory: directory)) { error in
             guard case HubStoreError.incompatible(99) = error else { return XCTFail("Unexpected error \(error)") }
         }
-        try executeDatabaseSQL("PRAGMA user_version=2")
+        try executeDatabaseSQL("PRAGMA user_version=3")
         let reopened = try HubStore(directory: directory)
         XCTAssertEqual(try reopened.task(task.id).goal, task.goal)
     }

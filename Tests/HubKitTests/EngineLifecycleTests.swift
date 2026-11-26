@@ -66,6 +66,10 @@ final class EngineLifecycleTests: XCTestCase {
         let result = try await wait(f) { [.completed,.needsUser].contains($0.state) }
         XCTAssertEqual(result.state,.completed,result.summary)
         XCTAssertEqual(result.attempts.count,2)
+        let committedAnswers = try f.store.messages(taskID:f.task.id).filter { $0.sender == "lead" && $0.recipient == "user" }
+        XCTAssertEqual(committedAnswers.compactMap(\.attemptID), result.attempts.map(\.id))
+        XCTAssertTrue(committedAnswers.allSatisfy { $0.finalStreamGroup?.hasPrefix("text/") == true })
+        XCTAssertTrue(try f.store.events(taskID:f.task.id).contains { $0.providerEventType == "item.completed" })
         XCTAssertEqual(try f.store.messages(taskID:f.task.id).first(where: { $0.id == msg.id })?.delivery,.processed)
         let taskPath = try XCTUnwrap(result.workspace?.path)
         XCTAssertEqual(try String(contentsOfFile:taskPath+"/result.txt"),"amended\n")
@@ -93,6 +97,7 @@ final class EngineLifecycleTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at:f.root) }
         try await f.engine.start(f.task.id)
         _ = try await wait(f) { $0.attempts.first?.state == .running }
+        _ = try await wait(f) { $0.attempts.first?.providerSessionID != nil }
         try await f.engine.cancel(f.task.id)
         let result = try f.store.task(f.task.id)
         XCTAssertEqual(result.state,.cancelled)

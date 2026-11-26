@@ -67,11 +67,13 @@ public struct ProviderAdapter: Sendable {
     public let id: ProviderID
     private let key: @Sendable () throws -> String?
     private let stateDirectory: URL
+    private let antigravitySettings: Data?
 
-    public init(_ id: ProviderID, stateDirectory: URL? = nil,
+    public init(_ id: ProviderID, stateDirectory: URL? = nil, antigravitySettings: Data? = nil,
                 deepSeekKey: @escaping @Sendable () throws -> String? = { try DeepSeekKeychain.read() }) {
         self.id = id
         self.key = deepSeekKey
+        self.antigravitySettings = antigravitySettings
         self.stateDirectory = stateDirectory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Agent Hub/Providers", isDirectory: true)
     }
@@ -105,8 +107,15 @@ public struct ProviderAdapter: Sendable {
             if let model { arguments += ["--model", model] }
             arguments += ["-"]
         case .antigravity:
-            guard !ProviderDiscovery.agyUsesAlternateBilling() else { throw ProviderError.message("请通过官方 CLI 选择 Google 账号通道。") }
-            let overrides = try Self.antigravityOverrides(workspace: workspace, readOnly: readOnly)
+            let settings: [String:Any]
+            if let antigravitySettings {
+                guard let decoded = try JSONSerialization.jsonObject(with: antigravitySettings) as? [String:Any] else {
+                    throw ProviderError.message("Antigravity 设置无效。")
+                }
+                settings = decoded
+            } else { settings = ProviderDiscovery.agySettings }
+            guard !ProviderDiscovery.agyUsesAlternateBilling(settings) else { throw ProviderError.message("请通过官方 CLI 选择 Google 账号通道。") }
+            let overrides = try Self.antigravityOverrides(workspace: workspace, readOnly: readOnly, saved: settings)
             arguments = ["--input-format", "stream-json", "--output-format", "stream-json",
                          "--sandbox", "--mode", readOnly ? "plan" : "accept-edits",
                          "--settings", overrides, "--disable-slash-commands"]
@@ -158,8 +167,7 @@ public struct ProviderAdapter: Sendable {
                                stdin: input, environment: env)
     }
 
-    private static func antigravityOverrides(workspace: URL, readOnly: Bool) throws -> String {
-        let saved = ProviderDiscovery.agySettings
+    private static func antigravityOverrides(workspace: URL, readOnly: Bool, saved: [String:Any]) throws -> String {
         let permissions = saved["permissions"] as? [String:Any]
         var denied = Set(permissions?["deny"] as? [String] ?? [])
         denied.insert("mcp(*)")

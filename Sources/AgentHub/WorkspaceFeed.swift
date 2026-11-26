@@ -24,9 +24,22 @@ private enum FeedEntry: Identifiable, Equatable, Sendable {
     }
 }
 
+private struct FeedTail: Equatable, Sendable {
+    var message: Int64 = 0
+    var event: Int64 = 0
+
+    static func read(store: HubStore, task: HubTask, role: String) throws -> Self {
+        let lastMessage = try store.recentConversation(taskID: task.id, role: role, limit: 1).last?.sequence
+        let ids = task.attempts.filter { $0.role == role }.map(\.id)
+        let lastEvent = try store.recentRoleEvents(taskID: task.id, attemptIDs: ids, includeTaskEvents: role == "lead", limit: 1).last?.sequence
+        return Self(message: lastMessage ?? 0, event: lastEvent ?? 0)
+    }
+}
+
 private struct FeedPage: Equatable, Sendable {
     var entries: [FeedEntry] = []
     var older: FeedCursor?
+    var tail = FeedTail()
 
     static func load(store: HubStore, task: HubTask, role: String, cursor: FeedCursor) throws -> Self {
         let count = 60
@@ -49,22 +62,9 @@ private struct FeedPage: Equatable, Sendable {
             }
         }
         let rawPage = newestFirst.reversed()
-        var seen = Set<String>()
-        let replies = messages.filter { $0.sender != "user" }
-        let attemptsByID = Dictionary(task.attempts.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest })
-        let displayed = rawPage.reversed().filter { entry in
-            guard seen.insert(entry.id).inserted else { return false }
-            if case .event(let event) = entry {
-                if event.kind.hasPrefix("message.") { return false }
-                if event.kind == "provider.text", let id = event.attemptID, let attempt = attemptsByID[id],
-                   let session = attempt.providerSessionID, !event.detail.isEmpty,
-                   replies.contains(where: { $0.sessionID == session && $0.itemID == attempt.itemID &&
-                       $0.requirementRevision == attempt.requirementRevision && $0.text.hasSuffix(event.detail) }) { return false }
-            }
-            return true
-        }.reversed()
-        let entries = Array(displayed)
-        guard messageCount > 0 || eventCount > 0 else { return Self(entries: entries) }
+        let entries = Array(rawPage)
+        let tail = FeedTail(message: messages.last?.sequence ?? 0, event: events.last?.sequence ?? 0)
+        guard messageCount > 0 || eventCount > 0 else { return Self(entries: entries, tail: tail) }
         var next = FeedCursor(messages: cursor.messages ?? (messages.last.map { $0.sequence + 1 } ?? 0),
                               events: cursor.events ?? (events.last.map { $0.sequence + 1 } ?? 0))
         for entry in rawPage {
@@ -73,7 +73,7 @@ private struct FeedPage: Equatable, Sendable {
             case .event(let event): next.events = min(next.events ?? .max, event.sequence)
             }
         }
-        return Self(entries: entries, older: next)
+        return Self(entries: entries, older: next, tail: tail)
     }
 }
 
@@ -88,6 +88,8 @@ struct WorkspaceFeed: View {
     @EnvironmentObject private var hub: HubController
     @AppStorage private var savedAnchor: String
     @AppStorage private var savedCursor: Data
+    @AppStorage private var seenMessage: Int
+    @AppStorage private var seenEvent: Int
     @State private var page = FeedPage()
     @State private var pending: FeedPage?
     @State private var cursor = FeedCursor.latest
@@ -98,6 +100,7 @@ struct WorkspaceFeed: View {
     @State private var loadError: String?
     @State private var scrollRequest = 0
     @State private var requestedAnchor = ""
+    @State private var olderPageHasNews = false
 
     init(task: HubTask, role: String) {
         self.task = task
@@ -105,6 +108,8 @@ struct WorkspaceFeed: View {
         let key = "workspace.\(task.id).\(role)."
         _savedAnchor = AppStorage(wrappedValue: "", key + "anchor")
         _savedCursor = AppStorage(wrappedValue: Data(), key + "page")
+        _seenMessage = AppStorage(wrappedValue: -1, key + "seenMessage")
+        _seenEvent = AppStorage(wrappedValue: -1, key + "seenEvent")
     }
 
     var body: some View {
@@ -149,10 +154,11 @@ struct WorkspaceFeed: View {
                         Button {
                             if cursor != .latest { navigate(to: .latest) }
                             else if let pending {
-                                page = pending; self.pending = nil; savedAnchor = ""; requestedAnchor = ""; scrollRequest += 1
+                                page = pending; markSeen(pending.tail)
+                                self.pending = nil; savedAnchor = ""; requestedAnchor = ""; scrollRequest += 1
                             }
                         } label: {
-                            Label(cursor == .latest ? "有新消息" : "返回最新记录", systemImage: "arrow.down")
+                            Label(cursor == .latest || olderPageHasNews ? "有新消息" : "返回最新记录", systemImage: "arrow.down")
                                 .font(.caption.weight(.medium)).padding(.horizontal, 9).padding(.vertical, 4)
                         }
                         .buttonStyle(.plain).background(.regularMaterial, in: Capsule())
@@ -188,6 +194,12 @@ struct WorkspaceFeed: View {
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    private func markSeen(_ tail: FeedTail) {
+        seenMessage = Int(tail.message)
+        seenEvent = Int(tail.event)
+        olderPageHasNews = false
+    }
+
     private func navigate(to next: FeedCursor) {
         cursor = next
         savedCursor = (try? JSONEncoder().encode(next)) ?? Data()
@@ -200,20 +212,31 @@ struct WorkspaceFeed: View {
 
     private func reload() async {
         guard let store = hub.store else { loadError = "任务数据库未连接。"; return }
-        if cursor != .latest && loaded { return }
         let observedCursor = cursor
         let task = task, role = role
         do {
+            if observedCursor != .latest {
+                let tail = try await Task.detached(priority: .utility) {
+                    try FeedTail.read(store: store, task: task, role: role)
+                }.value
+                guard !Task.isCancelled, observedCursor == cursor else { return }
+                if seenMessage < 0 || seenEvent < 0 { markSeen(tail) }
+                olderPageHasNews = tail.message > seenMessage || tail.event > seenEvent
+                if loaded { return }
+            }
             let next = try await Task.detached(priority: .userInitiated) {
                 try FeedPage.load(store: store, task: task, role: role, cursor: observedCursor)
             }.value
             guard !Task.isCancelled, observedCursor == cursor else { return }
             loadError = nil
             if !loaded {
-                loaded = true; page = next; scrollRequest += 1
+                loaded = true; page = next
+                if observedCursor == .latest { markSeen(next.tail) }
+                scrollRequest += 1
             } else if page != next {
                 if atBottom {
-                    savedAnchor = ""; requestedAnchor = ""; page = next; pending = nil; scrollRequest += 1
+                    savedAnchor = ""; requestedAnchor = ""; page = next; markSeen(next.tail)
+                    pending = nil; scrollRequest += 1
                 } else {
                     pending = next
                 }
