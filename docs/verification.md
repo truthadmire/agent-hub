@@ -37,6 +37,8 @@ AGENTHUB_PROBE_AGY=1 AGENTHUB_PROBE_DSH=1 swift test --filter ProviderTests
 
 GitHub 托管的 macOS runner 也在签名包对应的提交上运行了 Verify。无个人模型和签名凭据的测试、摄影示例，以及 arm64 本地 DMG 的构建和安装副本校验均成功，作业耗时 6 分 26 秒。[GitHub Actions 运行记录](https://github.com/truthadmire/agent-hub/actions/runs/45851368401)
 
+2026-11-27 00:05，更新后的 Verify 在干净的 macOS runner 上从独立 Applications 目录打开打包应用。WindowServer 观测到该进程的一个窗口。SQLite schema 为 3，初始项目与任务均为 0。三家 CLI 检测都返回路径和版本为空，随后应用正常退出。该检查记录了缺少全部 CLI 时的启动行为；安装入口交互另见桌面记录。[干净宿主实测日志](https://github.com/truthadmire/agent-hub/actions/runs/45854361787)
+
 ## 分发
 
 0.1.0（build 1）从源码提交 `8795c4ad77105fbc4fa962f67299875a075d7aba` 的干净检出构建。App、helper 与 DMG 均通过 Developer ID 签名核验，23:40 的安全时间戳来自 Apple。App 与 helper 启用了 Hardened Runtime。DMG 只读挂载、Applications 链接、复制安装后的签名与最终 SHA-256 校验均通过。签名包内的官方仓库地址已读取核对。[公开仓库](https://github.com/truthadmire/agent-hub)

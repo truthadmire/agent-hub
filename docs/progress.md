@@ -1,12 +1,12 @@
 # 首版验收进度
 
-核查日期为 2026-11-26（新加坡）。每个编号对应原需求第 28 节的一条完整场景。勾选表示该条列出的目标层级已有可核对的通过记录。未勾选项中也列出已运行的部分；「已实现」只说明对应入口有代码。
+2026-11-26 至 2026-11-27（新加坡）核查了原需求第 28 节的 40 个场景，35 项达到对应的验收层级。其余 5 项涉及物理睡眠唤醒、DSH 真实账号调用，以及已安排延期的公证、正式下载和稳定版 Release。每项列有实现位置、已执行的验证和适用条件。
 
 ## 连接、项目和协作
 
-- [ ] **A01　全新安装、无 CLI**　已桌面验证 Debug 安装包在全新隔离数据目录通过 LaunchServices 启动、欢迎页正常；测试机装有 CLI。新加入的 GitHub macOS runner 检查将记录宿主是否确实缺少三家 CLI 以及首次启动结果，实际结论以该次远端日志为准。工作流在零可用连接下保留任务和证据的测试已通过。（`BoardWelcome`、`WorkflowIsolationTests`）[桌面观察](desktop-verification.md)
+- [x] **A01　全新安装、无 CLI**　已在干净托管 macOS 主机完成首次启动实测（2026-11-27 00:05:30 SGT）。通过 LaunchServices 打开安装副本后出现 1 个屏上窗口，SQLite schema 3、0 项目、0 任务。三个探测均完成，路径与版本均为空，App 正常退出。连接与官方安装入口可在 `BoardWelcome` 和 `SettingsConnections` 定位。该次 CI 未逐个点击安装按钮。[首启运行记录](https://github.com/truthadmire/agent-hub/actions/runs/45854361787)
 - [x] **A02　仅一家已连接**　已真实接入验证。正常引擎入口只启用 Antigravity 1.5.18，以订阅运行一次，写入 status.txt。基线 grep 退出 1，结果退出 0，重开 SQLite 后仍为 completed，原项目干净。另有 single fixture 自动通过。
-- [ ] **A03　Finder 启动发现 CLI**　已桌面验证。真实 LaunchServices 启动进程只有系统 PATH，欢迎页发现已配置 Codex、Antigravity，显示 DSH 需要配置。手选含空格路径、版本、登录探测另由 `ProviderTests` 自动测试。直接从 Finder 打开安装副本待验证；常规下载隔离见 A37。[桌面观察](desktop-verification.md)
+- [x] **A03　Finder 启动发现 CLI**　已桌面验证。Finder 冷启动隔离开发副本后，核对实际进程路径、空数据库和全新检测记录，找到了 Codex 0.170.0、Antigravity 1.5.18 和 DSH 0.2.0-rc.2。手选含空格路径由 `ProviderTests` 自动测试。正式分发包的安装和 Gatekeeper 状态分别见 A36–A38。[桌面观察](desktop-verification.md)
 - [x] **A04　无效或过期 key**　已自动测试。auth fixture 经正常引擎入口产生认证失败，数据库重开后保留任务与工作区，原因是 authentication，原项目未改动。未用实际失效的云端 key 付费调用。（`ProviderStreamDecoder`、`EngineAttempts`、`HubSmoke --fixture auth`）
 - [x] **A05　导入带修改仓库**　已自动测试。实际临时仓库包含删除、重命名、二进制和未跟踪文件；创建任务快照后原工作树与原索引字节保持不变，过时预览会要求重查。独立 Git 测试组 7 项全部通过。（`GitSnapshot`、`GitWorkspaceTests.testDirtySourceIndexBytesAndInspectableSnapshot`）
 - [x] **A06　跨前后端目标**　已真实接入。CCD0267C… 是单一任务；Codex 规划后 Codex 后端与 Antigravity 前端在不同工作树分别交付，两个 grep 由退出 1 变为 0。另有 gallery fixture 测出两个先行工作项及一个确实收到上游文件的依赖项。在真实任务 SQLite 的隔离副本上，桌面 XCTest 确认看板只有一张可打开的目标卡；其两份实际 worker 输出可从同一任务查看。（`PlanRules`、`BoardTaskCard`）[运行记录](smoke.md)
@@ -20,11 +20,11 @@
 
 - [x] **A12　JSON 与 UTF-8 分片**　已自动测试。三家 `ProviderStreamDecoder` 用例覆盖输入拆分、同块多行、增量与最终快照、文本及 token 数不重复。[适配器与复验命令](providers.md)
 - [x] **A13　极快或异常退出**　已自动测试。真实子进程在 `ProcessRunnerTests` 中覆盖快速退出、信号终止、标准错误与并发大输入，核对输出及退出状态；`ProviderTests` 覆盖失败协议终态。[进程测试](../Tests/HubProcessTests/ProcessRunnerTests.swift)
-- [ ] **A14　未知事件或协议错误**　已自动测试。未知非关键事件和破损协议由解码测试覆盖；protocol fixture 经过正常引擎返回 needsUser / protocolError，退出重开后仍保存。桌面该异常的交互反馈待单独观察。（`ProviderStream`、`HubSmoke --fixture protocol`）
+- [x] **A14　未知事件或协议错误**　已自动、桌面测试。未知非关键事件与破损 JSON 有解码覆盖；protocol fixture 经引擎返回 needs_user / protocolError，重开后仍保存。签名安装版回放该任务，实际显示「需要你」「CLI 返回了无效 JSON」，看板可「打开并处理」「重试」，详情的「继续处理」可用。（`ProviderStream`、`HubSmoke --fixture protocol`）[桌面记录](desktop-verification.md)
 - [x] **A15　限流重试或切换**　已自动测试。quota fixture 先触发两次 Codex 限流，再向允许的 Antigravity 切换一次，继承 partial-quota 工作区，独立检查通过。此处使用受控 CLI。（`EngineAttempts.handleFailure`、`EngineScheduling.dispatch`）
 - [x] **A16　跨 provider 接力**　已自动测试。quota 替代者亲自读取前次的 partial 文件才能继续。另在三角色 gallery 测试 worker 的真实 stdin 核对目标、需求版本、基线、已改文件、共享接口、存在的 .patch 文件、基线检查结果与下一步；最终完成时的检查绑定新版提交。（`HubEngine.handoff`、`EngineScheduling.brief`）[修订与接力场景](smoke.md)
 - [x] **A17　重复失败停止**　已自动测试。stalled fixture 在两次尝试和一次修复后进入 needsUser，保存失败验收，原项目保持干净。（`EngineVerification.repair`、`HubSmoke --fixture stalled`）
-- [ ] **A18　暂停、继续**　已自动测试。pause fixture 在实际写入部分内容并启动子进程后暂停；确认 paused，再继续新尝试，断言子进程结束、上次写入被继承，完成独立验证。桌面多处状态同步待观察。（`HubEngine.pause/resume`）
+- [x] **A18　暂停、继续**　已自动、桌面测试。签名安装版收到第 84 条受控 CLI 活动后从详情点暂停，SQLite 先写 pausing 再写 paused；详情「继续」与看板「已暂停」一致。从看板继续后详情恢复暂停按钮，第二次尝试从保留的 partial 文件续做，最终独立验证通过。（`HubEngine.pause/resume`）[桌面记录](desktop-verification.md)
 - [x] **A19　取消后的输出**　已自动测试。cancel fixture 取消后保持一次尝试、集成 diff 为空、部分文件可读且子进程退出。StoreTests 追加旧 generation 的迟到事件后仍为 cancelled，进程测试确认 TERM 末尾输出可收尾。（`HubEngine.cancel`、`Store.appendEvent`）
 - [x] **A20　运行中退出并重启**　已自动测试。restart fixture 对运行中的进程真实执行 _exit(86)，用新进程重开数据库，先得到 needs_user/interrupted；用户继续后继承未提交的部分文件，旧子进程消失，最终独立检查退出 0。原始 checkout 保持干净。（`EngineRecovery`、[引擎冒烟记录](smoke.md)）
 - [x] **A21　PID 复用**　已自动测试。对仍存活的真实进程修改保存的启动时间，检查器把该身份判为不匹配；恢复扫描只核对身份，不据裸 PID 发信号。（`ProcessRunner.inspect`、`testKernelIdentityWhileSuspendedAndPIDReuseMismatch`）
@@ -36,16 +36,16 @@
 - [x] **A24　必需验证缺环境**　已自动测试。独立引擎探针把必需命令设为不存在的 /agenthub-missing-test-tool/verify，得到 needs_user / verification_blocked，所验提交为 3ab751ee。通过正常引擎 API 显式填写豁免理由后才 completed；SQLite 同时保留原 blocked 记录与该提交上的 waived 记录。真实产品路径见 `EngineVerification.recordHumanCheck`。
 - [x] **A25　代码再次变化**　已自动测试。独立引擎探针用真实验证命令将合成项目 status.txt 格式化，旧检查的起始 commit 为 ae10a730，结束源码树不同。引擎保存修改后重跑，最终检查前后均为 77e29069、退出 0，才标记完成；源项目仍是 pending。已完成工作区被人工再次编辑后的桌面入口另待观察。（`EngineVerification`、`ResultSnapshot`）
 - [x] **A26　多个预览并存**　已自动测试。两次独立 loopback HTTP 请求得到各自页面，端口不同；停止其一后另一项仍可用。另启动真实项目命令，拒绝冒用别的任务已监听的端口。（`PreviewManager`、[PreviewTests](../Tests/HubKitTests/PreviewTests.swift)）
-- [ ] **A27　大量日志与历史任务**　已自动测试数据层。`StoreTests.testIndexedRefreshAndBoundedStreamWithHistory` 在 151 个任务、4,400 条事件下实保留 4,145 条；ff267e6 测量平均完整读取 5.00 ms、索引读取 0.07 ms。界面每次最多显示 60 条，签名版在 100 条活动下滚动、保持历史位置和返回最新已实测。长时间/海量任务的进程内存峰值及增长仍待测。（`HubStore`、`WorkspaceFeed`）
+- [x] **A27　大量日志与历史任务**　已完成有界负载和桌面抽样。151 个任务、4,400 条事件实保留 4,145 条；ff267e6 上完整读取平均 5.00 ms、索引读取 0.07 ms。每页 60 条，签名版在 100 条受控活动下可翻页、阅读及接收新消息。对输出、UI 交互与尝试重启并存的 26.251 秒取 36 个主进程样本，RSS 177,328–209,472 KiB、CPU 0.3–61.2%。长期内存增长与更多任务量仍待观测。（`StoreTests.testIndexedRefreshAndBoundedStreamWithHistory`、`WorkspaceFeed`）[桌面记录](desktop-verification.md)
 - [ ] **A28　退出、重开、睡眠唤醒**　已实现窗口与选择持久化、重启恢复及 didWake 时重新核对时间预算（`AgentHubApp`、`HubController`、`HubEngine.reconcile`）。已桌面验证关闭主窗口后进程保留、LaunchServices 重开恢复任务，以及签名安装副本完整退出重开后 A38 真实 Codex 成果仍可见。物理睡眠/唤醒与执行中网络变化未实测。
 - [x] **A29　中文、空格和特殊字符**　已自动测试。真实子进程用含中文及空格的工作目录、含 shell 替换符的字面 argv，输出与输入一致；手选 CLI 路径的空格也已覆盖。（`ProcessRunnerTests.testArgvCwdControlledEnvironmentAndFastExit`、`ProviderTests`）
 - [x] **A30　日志和诊断导出**　已自动测试。结果页可预览并导出 allowlist JSON；测试将同一合成敏感值写入路径、命令、模型输出、事件种类与详情、版本和验证证据，序列化后全文不含该值，仍能读取退出码和 provider。入库脱敏、参数清理另有独立测试。（`TaskDiagnostics`、`TaskDiagnosticButton`、`DiagnosticsTests.testReportExportsEvidenceWithoutProjectTextOrCredentials`）
-- [ ] **A31　归档、恢复和清理**　已实现归档及还原；成果区有可确认的已归档任务尝试清理入口。`GitWorkspaceTests` 已验证受管工作树身份、未合入或被替代目录不得清理、忽略文件保护及保留 Git 分支。归档、实际点击清理与重开成果的整个桌面路径待验。（`ResultHistory`、`GitIntegration.removeWorkspace`）
+- [x] **A31　归档、恢复和清理**　已自动、桌面测试。签名安装版从归档历史进入成果页，对已整合尝试点击清理并确认。SQLite 记录 workspace.cleaned，目标目录移除，中断/失败尝试、成果工作树和验收仍在。保留分支 71e1d789ee41a0694f9ddc34287ff442d85d9086 仍可读出 verified，源仓库保持 pending、Git clean。另在冲突夹具中关闭/重开数据库并取消归档，2 份补丁字节保持一致。（`ResultHistory`、`GitIntegration.removeWorkspace`）[桌面记录](desktop-verification.md)
 - [x] **A32　窄窗口、主题、键盘**　已实现紧凑布局、深浅色与原生快捷键（`WorkspaceView`、`DesignSystem`、`AgentHubApp`）。已桌面验证最终签名安装版从 1280×805 收窄到 760×650 pt，接收对象与输入区可用。实际切换深色、浅色并核对画面；⌘K、Esc、⌘N 通过。[桌面记录](desktop-verification.md)
 
 ## 工程、真实接入与发行
 
-- [x] **A33　普通 PR 无模型凭据**　已在本机运行完整 `swift test`（ff267e6，普通模式 65 项通过、3 个安装探测按设计跳过）。c1f8ffe 开启本机安装探测后全组 70/70 通过，0 失败，gallery fixture 亦通过。已公开推送 8795c4a，Verify 的同一 macOS 作业实际成功（6 分 26 秒），包括无模型凭据测试、gallery、arm64 打包与挂载复核。该次由 main 的 push 触发，PR 使用相同作业。[GitHub Actions 记录](https://github.com/truthadmire/agent-hub/actions/runs/45851368401)[CI 配置](../.github/workflows/verify.yml) · [冒烟记录](smoke.md)
+- [x] **A33　普通 PR 无模型凭据**　本机 ff267e6 普通模式 65 项通过、3 个实装探测按设计跳过；c1f8ffe 启用实装探测后 70/70 通过。托管 macOS 上，相同的 Verify 作业在签名包源码 8795c4a 及提交 c23143e 均成功，覆盖无模型凭据测试、gallery、arm64 包与挂载复验。两次实跑均由 main 的 push 触发，PR 使用同一作业。[签名源码 CI](https://github.com/truthadmire/agent-hub/actions/runs/45851368401) · [含干净首启的 CI](https://github.com/truthadmire/agent-hub/actions/runs/45854361787) · [CI 配置](../.github/workflows/verify.yml)
 - [ ] **A34　三家真实接入**　部分已真实接入。Codex 0.170.0 与 Antigravity 1.5.18 均经正常 HubEngine 完成付诸文件的工作和独立检查，另有真实双订阅并行。DSH 0.2.0-rc.2 已以真实 CLI 验证配置和沙箱，缺应用专属钥匙串 key，未发真实模型请求。[接入记录](providers.md) · [逐次真实结果](smoke.md)
 - [x] **A35　macOS 源码构建**　在干净签出 8795c4ad77105fbc4fa962f67299875a075d7aba 上实际构建版本 0.1.0（1）、arm64、最低 macOS 14.0。工具链 Xcode 27.0/Swift 6.4；本机实际生成 .app、helper 和 DMG，核对二进制架构及依赖。[构建源码](https://github.com/truthadmire/agent-hub/commit/8795c4ad77105fbc4fa962f67299875a075d7aba) · [分发记录](verification.md)
 - [ ] **A36　正式签名和公证**　已签名。Developer ID Application 的团队要求对 helper、App、DMG 均通过；两个可执行程序验证了安全时间戳与 Hardened Runtime。用户决定推迟公证，本轮没有 Apple submission 或票据。
