@@ -8,7 +8,7 @@ case "$mode" in local) identity=adhoc ;; signed|release) identity=developer-id ;
 if [[ "$mode" != local ]]; then
   : "${APPLE_TEAM_ID:?Set the expected Developer Team ID}"
   [[ "$APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]] || exit 2
-  codesign --verify --strict -R "anchor apple generic and certificate leaf[field.1.2.840.113635.100.6.1.13] exists and certificate leaf[subject.OU] = \"$APPLE_TEAM_ID\"" "$dmg"
+  codesign --verify --strict -R "=anchor apple generic and certificate leaf[field.1.2.840.113635.100.6.1.13] exists and certificate leaf[subject.OU] = \"$APPLE_TEAM_ID\"" "$dmg"
 fi
 if [[ "$mode" = release ]]; then
   xcrun stapler validate "$dmg"

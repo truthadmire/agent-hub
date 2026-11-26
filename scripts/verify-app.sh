@@ -34,7 +34,7 @@ if [[ "$mode" = developer-id ]]; then
   : "${APPLE_TEAM_ID:?Set the expected Developer Team ID}"
   [[ "$APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]] || exit 2
   for item in "$app/Contents/Helpers/HubProcessGuard" "$app"; do
-    codesign --verify --strict -R "anchor apple generic and certificate leaf[field.1.2.840.113635.100.6.1.13] exists and certificate leaf[subject.OU] = \"$APPLE_TEAM_ID\"" "$item"
+    codesign --verify --strict -R "=anchor apple generic and certificate leaf[field.1.2.840.113635.100.6.1.13] exists and certificate leaf[subject.OU] = \"$APPLE_TEAM_ID\"" "$item"
     details=$(codesign -dv --verbose=4 "$item" 2>&1)
     [[ "$details" = *"runtime)"* && "$details" = *"Timestamp="* ]]
     # No special privileges or debugging entitlements are needed by either binary.

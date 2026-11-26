@@ -48,3 +48,16 @@ AGENTHUB_PROBE_AGY=1 AGENTHUB_PROBE_DSH=1 swift test --filter ProviderTests
 ```
 
 在受测机器上，这组检查的 11 个测试全部通过。实装 agy 1.5.18 在最终只读、可写两套权限配置下均进入协议解析，拒绝不支持的 control_request，退出码均为 2。该检查没有提交用户轮次。随后在最终 accept-edits 和上述权限设置下，Antigravity 1.5.18 通过一次真实订阅任务，单个尝试仅修改示例的 status.txt。基线检查退出 1，集成后退出 0，重开数据库保留完成状态。CLI 报告输入 20,257、输出 2,361 token。无推理检查成功挂载 DSH 的受管配置，未知 session 被准确拒绝。Hub 启动的普通 shell 中 key 存在为 false。另一次检查通过真实 DSH 的 Cordis、sandbox-policy、sandbox-local、subprocess-local、bash-sandbox 模块运行 read-only Bash，子进程中 key 存在也为 false。此检查覆盖受测发行版的 Bash 路径；第三方自定义插件具备自己的进程权限。真实模型请求与验收命令详见[工作流冒烟报告](smoke.md)。
+
+## 真机续接与启动阶段取消
+
+2026-11-26，使用正式适配器和 HubProcess 在两次已完成的临时示例上各执行了一次原生续接。会话 ID、原工作目录及原本改过的文件来自对应任务的 SQLite 记录。续接请求只问“上一轮被分配修改哪个文件”，未提供文件名，并要求不使用工具、不改文件。
+
+| CLI 与原始合成任务 | 传入并返回的完整会话 ID | 结果 |
+| --- | --- | --- |
+| Codex 0.170.0，双订阅示例的后端角色，任务 `CCD0267C-388B-45DE-8661-378E6C8E5EFA` | `01a21875-efdb-75f0-9881-22491ee40e5a` | 在原 worktree 用 read-only 续接，准确回答 `backend.txt`。0 次工具事件，CLI 成功终止，退出 0。用量事件报输入 63,018、输出 168 token |
+| Antigravity 1.5.18，最终权限版单文件示例，任务 `0CD0FA0E-ACA8-4AD5-B325-1054A55B5B7C` | `169cfc9e-6dc1-4528-a2bf-a2d38d2a9544` | 在原 worktree 用 plan 和只读权限规则续接，准确回答 `status.txt`。0 次工具事件，CLI 成功终止，退出 0。会话累计输入 36,071、输出 2,506 token |
+
+对上述相同两组参数，各运行一次正式进程监督取消检查。监督器创建受管进程，核对 PID、启动时间及可执行程序身份后，在释放挂起进程之前收到取消。Codex 进程 PID 为 60967，Antigravity 为 61015。两者的取消标志均为 true，退出后身份检查均为 gone；对各自进程组的存活检查均返回 ESRCH。stdout 与 stderr 均为 0 字节。这两次检查覆盖真实 CLI 的启动阶段取消，未发送 prompt，也未启动模型轮次。运行中含子进程的取消另有进程监督 fixture 覆盖。最后再核对两处 worktree，HEAD 各为 `ac971073396d8f527c9b09bbbacb1470a167a912` 和 `2b2585581c92fc5642197ef65c87ab16392375ff`，前后相同且工作区干净。
+
+正式任务从暂停或中断恢复时，引擎按检查点、工作区和交接记录建立新 Attempt 和新会话。原生续接是适配器在指定原会话与原工作目录时提供的单独能力。DSH 的未知会话拒绝已在真实 CLI 验证，本机缺少 Hub 专用 key，因此没有执行带模型轮次的原生续接。
