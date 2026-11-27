@@ -8,7 +8,9 @@ Agent Hub 是一个中文 macOS 工作台。把一个本地 Git 仓库和开发�
 
 ## 安装
 
-首版面向 Apple Silicon，最低部署目标是 macOS 14。0.1.0 已生成 Developer ID 签名的本地 DMG，Apple 公证与公开安装包发布已延期。现在可从公开源码构建使用。[验证记录](docs/verification.md) · [GitHub 仓库](https://github.com/truthadmire/agent-hub)
+Agent Hub 0.1.0 适用于 Apple Silicon 和 macOS 14 或更新版本。下载 DMG，打开磁盘映像，将 **Agent Hub** 拖入 **Applications（应用程序）**，然后从 Finder 启动。应用和 DMG 均已通过 Apple 公证。[下载 0.1.0 DMG](https://github.com/truthadmire/agent-hub/releases/download/v0.1.0/AgentHub-0.1.0-arm64.dmg) · [发行说明与校验和](https://github.com/truthadmire/agent-hub/releases/tag/v0.1.0)
+
+从源码启动开发版可在工程根目录运行以下命令。
 
 ```sh
 ./script/build_and_run.sh --verify

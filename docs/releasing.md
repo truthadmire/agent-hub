@@ -2,6 +2,8 @@
 
 Agent Hub 0.1.0 的目标是 Apple Silicon 和 macOS 14.0 及以上。版本号、构建号、图标与 bundle ID 来自 `Packaging/Info.plist`。应用只有两个 Mach-O 可执行文件，分别是 `Contents/MacOS/AgentHub` 与 `Contents/Helpers/HubProcessGuard`。本版使用系统 Swift 运行库、系统框架和 SQLite，外部 AI CLI 由用户单独安装。
 
+0.1.0 的正式 DMG 已在 GitHub Releases 发布。此版本使用本机 Developer ID 签名和 Apple 公证服务完成发行。标签 `v0.1.0` 指向已构建、实测的提交 `8795c4a`。发布页提供最终 DMG、校验和、构建信息和两份 Apple 公证结果。[GitHub Release](https://github.com/truthadmire/agent-hub/releases/tag/v0.1.0)
+
 ## 开发版与安装包
 
 在 Apple Silicon Mac 的 Xcode 开发工具环境运行以下命令。下载的源码中已经包含原创 `.icns`。
@@ -34,7 +36,7 @@ swift test
 
 普通 PR 使用只读 token，在无签名和模型凭据的 macOS runner 上运行 Swift 测试、模拟工作流、双产品构建和 DMG 的挂载与安装副本校验。正式工作流仅由受保护的版本标签触发。维护者设置保护 `v*` 标签的 ruleset、同名环境 `macos-release` 的发布审批，以及受保护的默认分支；仅授权的维护者可创建此类标签。工作流检查标签所指提交属于默认分支，且 `vX.Y.Z` 与 Info.plist 一致。[GitHub 托管 runner](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)
 
-配置 `macos-release` 环境中的变量 `APPLE_TEAM_ID`、`DEVELOPER_ID_IDENTITY`，以及 secrets `CERTIFICATE_P12_BASE64`、`CERTIFICATE_PASSWORD`、`NOTARY_KEY_BASE64`、`NOTARY_KEY_ID` 和适用时的 `NOTARY_ISSUER`。签名作业在临时 Keychain 中导入证书，退出时删除临时凭据。上传到 GitHub Release 的作业只有创建版本所需的仓库写权限，接收 DMG、SHA-256、版本说明、构建信息及去敏后的公证日志。项目仓库地址和授权确定后，由维护者推送受保护标签触发正式发布。
+如使用 CI 发行，配置 `macos-release` 环境中的变量 `APPLE_TEAM_ID`、`DEVELOPER_ID_IDENTITY`，以及 secrets `CERTIFICATE_P12_BASE64`、`CERTIFICATE_PASSWORD`、`NOTARY_KEY_BASE64`、`NOTARY_KEY_ID` 和适用时的 `NOTARY_ISSUER`。签名作业在临时 Keychain 中导入证书，退出时删除临时凭据。上传到 GitHub Release 的作业只有创建版本所需的仓库写权限，接收 DMG、SHA-256、版本说明、构建信息及去敏后的公证日志。维护者可通过受保护的版本标签触发该工作流。
 
 ## 验证下载与升级
 

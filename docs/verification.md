@@ -41,11 +41,18 @@ GitHub 托管的 macOS runner 也在签名包对应的提交上运行了 Verify�
 
 ## 分发
 
-0.1.0（build 1）从源码提交 `8795c4ad77105fbc4fa962f67299875a075d7aba` 的干净检出构建。App、helper 与 DMG 均通过 Developer ID 签名核验，23:40 的安全时间戳来自 Apple。App 与 helper 启用了 Hardened Runtime。DMG 只读挂载、Applications 链接、复制安装后的签名与最终 SHA-256 校验均通过。签名包内的官方仓库地址已读取核对。[公开仓库](https://github.com/truthadmire/agent-hub)
+0.1.0（build 1）从源码提交 `8795c4ad77105fbc4fa962f67299875a075d7aba` 的干净检出构建。App 与 helper 均通过 Developer ID 签名核验，启用了 Hardened Runtime，并带有 Apple 安全时间戳。正式发行使用此前完成桌面验收的这份签名应用。[构建源码](https://github.com/truthadmire/agent-hub/commit/8795c4ad77105fbc4fa962f67299875a075d7aba)
 
-| 本地产物 | 字节或校验 |
+| 产物 | 字节或校验 |
 | --- | --- |
-| `dist/signed/0.1.0/AgentHub-0.1.0-arm64-signed-pending-notarization.dmg` | 2,822,828 字节，SHA-256 `76cfb80f4e987bb8c87386e4b820fde8848f84399eb344a64a0ddbdb91a3ae8c` |
+| `dist/release/0.1.0/AgentHub-0.1.0-arm64.dmg`（公开发行包） | 2,825,678 字节，SHA-256 `11d65026ead3b8ccd3f4716733f5c33e17440893c6ea9c56d2ea6d435b35744b` |
+| `dist/signed/0.1.0/AgentHub-0.1.0-arm64-signed-pending-notarization.dmg`（公证前候选包） | 2,822,828 字节，SHA-256 `76cfb80f4e987bb8c87386e4b820fde8848f84399eb344a64a0ddbdb91a3ae8c` |
 | `dist/source/0.1.0/AgentHub-0.1.0-source.zip` | SHA-256 `8be69759006b4f9ca1905aa63b41782fb54979eaa84cacbcf894f5644bfe2e36`，ZIP 注释含同一源码提交 |
 
-Apple 公证和稳定版 GitHub Release 按维护者安排延期。本机对签名 App 运行 `spctl --assess --type execute --verbose=4`，返回退出码 3 与 `source=Unnotarized Developer ID`。公开下载后的 Gatekeeper 放行待公证完成后验证。[发布流程](releasing.md)
+2026-11-27，Apple 接受了应用提交 `50b58a27-e38e-48d3-b759-114a4f79c769` 和 DMG 提交 `2ca3f642-b634-41d4-8f70-207afa8ee763`，两份结果的 `issues` 均为空。应用附票后装入 DMG，DMG 完成签名、公证与附票。两份票据分别通过 `stapler validate`。Apple 结果中的 SHA-256 对应提交时的字节，发行校验和对应最终附票文件。[应用公证结果](https://github.com/truthadmire/agent-hub/releases/download/v0.1.0/notarization-app.json) · [DMG 公证结果](https://github.com/truthadmire/agent-hub/releases/download/v0.1.0/notarization-dmg.json) · [发行校验和](https://github.com/truthadmire/agent-hub/releases/download/v0.1.0/SHA256SUMS.txt)
+
+09:29:47（新加坡），`v0.1.0` 作为公开稳定版发布到 GitHub Releases。远端标签指向构建提交，六个附件的远端大小和 SHA-256 与本地一致。09:31 使用临时、未登录的 Chrome 配置从公开直链重新下载。浏览器写入的隔离标记为 `0081`，来源为 Chrome，下载文件的 SHA-256 与发行校验和一致。[GitHub Release](https://github.com/truthadmire/agent-hub/releases/tag/v0.1.0)
+
+在本机只读挂载该下载文件后，核对了 Applications 链接，将 App 复制到独立的 Applications 目录。下载的 DMG 和安装后的 App 均通过票据验证和 Gatekeeper 评估，后者返回 `accepted` 和 `source=Notarized Developer ID`。安装副本的主程序与 helper 和公证前的实测候选版逐字节相同。
+
+09:37 通过 LaunchServices 启动该副本。Gatekeeper 使用了 App Translocation 临时路径。验收工具核对了两个可执行文件和该 PID 持有的独立数据库锁。WindowServer 实际观测到一个应用窗口，schema 3 空库初始化成功，三家 CLI 的检测均完成。验收实例随后正常退出。

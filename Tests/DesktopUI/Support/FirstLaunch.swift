@@ -84,9 +84,7 @@ private struct FirstLaunch {
         configuration.arguments = ["-ApplePersistenceIgnoreState", "YES", "-NSQuitAlwaysKeepsWindows", "NO"]
         let started = Date()
         let process = try await NSWorkspace.shared.openApplication(at: app, configuration: configuration)
-        guard process.bundleURL?.resolvingSymlinksInPath().standardizedFileURL.path == app.path else {
-            throw Failure("LaunchServices returned a different app; leaving that process untouched")
-        }
+        try await verifyLaunchedCopy(process, expected: app, dataDirectory: directory)
         print("launch=LaunchServices install=isolated_Applications_copy process=\(process.processIdentifier)")
         var outcome: Error?
         do { try await observe(process, directory: directory, domain: domain, since: started) }
@@ -102,6 +100,43 @@ private struct FirstLaunch {
         }
         if let outcome { throw outcome }
         print("shutdown=normal")
+    }
+
+    @MainActor private static func verifyLaunchedCopy(_ process: NSRunningApplication, expected: URL,
+                                                       dataDirectory: URL) async throws {
+        let mismatch = Failure("Cannot verify that LaunchServices returned the selected test app")
+        guard let actual = process.bundleURL?.resolvingSymlinksInPath().standardizedFileURL else { throw mismatch }
+        if actual.path == expected.path { return }
+
+        // Gatekeeper may run a browser download from a read-only AppTranslocation mount.
+        // Match the code and the newly created test store before managing that PID.
+        let files = FileManager.default
+        guard actual.pathComponents.contains("AppTranslocation"),
+              process.bundleIdentifier == Bundle(url: expected)?.bundleIdentifier,
+              ["Contents/Info.plist", "Contents/MacOS/AgentHub", "Contents/Helpers/HubProcessGuard"].allSatisfy({
+                  files.contentsEqual(atPath: expected.appendingPathComponent($0).path,
+                                      andPath: actual.appendingPathComponent($0).path)
+              }) else { throw mismatch }
+
+        let lock = dataDirectory.appendingPathComponent("owner.lock").path
+        for _ in 0..<50 {
+            guard !process.isTerminated else { throw mismatch }
+            if files.fileExists(atPath: lock) {
+                let probe = Process()
+                probe.executableURL = URL(fileURLWithPath: "/usr/sbin/lsof")
+                probe.arguments = ["-nP", "-a", "-p", String(process.processIdentifier), "-Fp", lock]
+                probe.standardOutput = FileHandle.nullDevice
+                probe.standardError = FileHandle.nullDevice
+                try probe.run()
+                probe.waitUntilExit()
+                if probe.terminationStatus == 0 {
+                    print("app_translocation=verified executables=matched private_store_lock=held")
+                    return
+                }
+            }
+            try await Task.sleep(nanoseconds: 200_000_000)
+        }
+        throw mismatch
     }
 
     @MainActor private static func observe(_ process: NSRunningApplication, directory: URL,

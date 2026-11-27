@@ -1,6 +1,6 @@
 # 首版验收进度
 
-2026-11-26 至 2026-11-27（新加坡）核查了原需求第 28 节的 40 个场景，35 项达到对应的验收层级。其余 5 项涉及物理睡眠唤醒、DSH 真实账号调用，以及已安排延期的公证、正式下载和稳定版 Release。每项列有实现位置、已执行的验证和适用条件。
+2026-11-26 至 2026-11-27（新加坡）核查了原需求第 28 节的 40 个场景，38 项达到对应的验收层级。剩余两项是物理睡眠唤醒和使用 DSH 真实账号调用模型。
 
 ## 连接、项目和协作
 
@@ -48,10 +48,10 @@
 - [x] **A33　普通 PR 无模型凭据**　本机 ff267e6 普通模式 65 项通过、3 个实装探测按设计跳过；c1f8ffe 启用实装探测后 70/70 通过。托管 macOS 上，相同的 Verify 作业在签名包源码 8795c4a 及提交 c23143e 均成功，覆盖无模型凭据测试、gallery、arm64 包与挂载复验。两次实跑均由 main 的 push 触发，PR 使用同一作业。[签名源码 CI](https://github.com/truthadmire/agent-hub/actions/runs/45851368401) · [含干净首启的 CI](https://github.com/truthadmire/agent-hub/actions/runs/45854361787) · [CI 配置](../.github/workflows/verify.yml)
 - [ ] **A34　三家真实接入**　部分已真实接入。Codex 0.170.0 与 Antigravity 1.5.18 均经正常 HubEngine 完成付诸文件的工作和独立检查，另有真实双订阅并行。DSH 0.2.0-rc.2 已以真实 CLI 验证配置和沙箱，缺应用专属钥匙串 key，未发真实模型请求。[接入记录](providers.md) · [逐次真实结果](smoke.md)
 - [x] **A35　macOS 源码构建**　在干净签出 8795c4ad77105fbc4fa962f67299875a075d7aba 上实际构建版本 0.1.0（1）、arm64、最低 macOS 14.0。工具链 Xcode 27.0/Swift 6.4；本机实际生成 .app、helper 和 DMG，核对二进制架构及依赖。[构建源码](https://github.com/truthadmire/agent-hub/commit/8795c4ad77105fbc4fa962f67299875a075d7aba) · [分发记录](verification.md)
-- [ ] **A36　正式签名和公证**　已签名。Developer ID Application 的团队要求对 helper、App、DMG 均通过；两个可执行程序验证了安全时间戳与 Hardened Runtime。用户决定推迟公证，本轮没有 Apple submission 或票据。
-- [ ] **A37　DMG 下载、安装和启动**　已验证 0.1.0 的签名 DMG，2,822,828 字节，SHA-256 为 `76cfb80f4e987bb8c87386e4b820fde8848f84399eb344a64a0ddbdb91a3ae8c`。只读挂载、复制安装及复制后签名复核通过；签名安装副本已通过 LaunchServices 在实际桌面启动并操作。签名 App 本机 Gatekeeper 评估返回退出码 3（Unnotarized Developer ID）。用户已推迟公证及稳定 Release，下载后的隔离标记与正式 Gatekeeper 放行尚待复验。[分发记录](verification.md)
-- [x] **A38　安装后执行真实任务**　已在最终 DMG 的 Developer ID 安装副本内通过 GUI 创建任务；经用户授权复用官方 Codex 登录，实际修改并整合 status.txt，最终提交 1eeb7785f0c67ac3673400f43bf53693c7e306b3。独立 grep 基线退出 1、最终退出 0；原仓库保留 pending 且 Git 状态干净，签名 App 退出重开后仍显示 completed 和成果。任务 ID 为 8AFF2A55-7CA4-4416-9FBF-ABD348CAB47E。另有安装副本的离线受控 CLI 版闭环。[签名安装副本桌面记录](desktop-verification.md)
-- [ ] **A39　GitHub 开源交付**　已建立公开 GitHub 仓库，main 首次推送包含签名包对应的 8795c4a。许可证、第三方声明、源码与双 CI 工作流已公开。用户决定推迟公证及稳定 Release；远端检查结果见 A33。[公开仓库](https://github.com/truthadmire/agent-hub) · [发行流程](releasing.md)
-- [x] **A40　结果报告**　已记录签名包源码、大小、SHA-256、Developer ID 和 Gatekeeper 结果，区分本机测试、远端 CI、受控 CLI、正式订阅和签名安装副本。DSH 真实付费调用、公开下载与公证、未实测桌面情形均逐项列出。[验证汇总](verification.md) · [真实运行索引](../Examples/Evidence/2026-11-26.json)
+- [x] **A36　正式签名和公证**　helper、App、DMG 均通过 Developer ID 签名验证。Apple 已接受应用及 DMG 两次提交，两份公证日志均无问题项。两份票据已附加并验证通过。[公证结果](verification.md#分发)
+- [x] **A37　DMG 下载、安装和启动**　Chrome 使用未登录的临时配置从 GitHub Releases 下载正式 DMG。文件带有浏览器写入的隔离标记，SHA-256 与公开校验和一致。只读挂载、复制安装及 Gatekeeper 均通过。启动后观测到一个应用窗口，三项 CLI 检测均完成，应用正常退出。[分发记录](verification.md#分发)
+- [x] **A38　安装后执行真实任务**　公证前在 Developer ID 签名安装副本内通过 GUI 创建任务，复用获授权的官方 Codex 登录，实际修改并整合 status.txt，最终提交 1eeb7785f0c67ac3673400f43bf53693c7e306b3。独立 grep 基线退出 1、最终退出 0。原仓库保留 pending，Git 状态干净。任务 8AFF2A55-7CA4-4416-9FBF-ABD348CAB47E 在应用重开后仍显示 completed 和成果。公开下载副本的两个可执行文件与此次实测版逐字节一致。[签名安装副本桌面记录](desktop-verification.md)
+- [x] **A39　GitHub 开源交付**　公开仓库提供源码、许可证、第三方声明与 CI。公开稳定版 `v0.1.0` 的标签指向构建提交 `8795c4a`。DMG、校验和、构建信息、公证结果和版本说明均可下载，附件大小及 SHA-256 已核对。[GitHub Release](https://github.com/truthadmire/agent-hub/releases/tag/v0.1.0)
+- [x] **A40　结果报告**　已记录签名和公证、公开下载、桌面交互与真实 CLI 的具体证据。DSH 真实付费调用和物理睡眠唤醒保留各自的待验状态。[验证汇总](verification.md) · [真实运行索引](../Examples/Evidence/2026-11-26.json)
 
 完整场景的可复验步骤与证据见[验证汇总](verification.md)、[工作流与真实 CLI 记录](smoke.md)、[原生桌面验收](desktop-verification.md)和[发行流程](releasing.md)。[底座选型](architecture/base-selection.md)记录了系统与上游模块探针。
